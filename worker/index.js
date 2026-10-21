@@ -53,7 +53,8 @@ function paidMode(env) {
 }
 
 function paymentReady(env) {
-  return paidMode(env) && env.DB && env.STRIPE_SECRET_KEY?.startsWith('sk_test_') && env.STRIPE_WEBHOOK_SECRET?.startsWith('whsec_');
+  return paidMode(env) && env.DB && env.ROOM_ACCESS_CODE && env.OPENAI_API_KEY &&
+    env.STRIPE_SECRET_KEY?.startsWith('sk_test_') && env.STRIPE_WEBHOOK_SECRET?.startsWith('whsec_');
 }
 
 export default {
