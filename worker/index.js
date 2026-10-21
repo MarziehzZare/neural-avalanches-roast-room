@@ -54,7 +54,7 @@ function paidMode(env) {
 
 function paymentReady(env) {
   const keyPrefix = env.PAYMENTS_MODE === 'live' ? 'sk_live_' : 'sk_test_';
-  return paidMode(env) && env.DB && env.ROOM_ACCESS_CODE && env.OPENAI_API_KEY &&
+  return paidMode(env) && env.DB && env.OPENAI_API_KEY &&
     env.STRIPE_SECRET_KEY?.startsWith(keyPrefix) && env.STRIPE_WEBHOOK_SECRET?.startsWith('whsec_');
 }
 
@@ -94,13 +94,11 @@ export default {
       if (url.pathname === '/api/wallet/recover') {
         const wallet = await recoverWallet(body.recoveryCode, env);
         if (!wallet) return json({ error: 'Recovery code not found.' }, 404);
-        if (body.accessCode !== env.ROOM_ACCESS_CODE && !wallet.invite_access) return json({ error: 'The room access code is incorrect.' }, 403);
         const response = json({ credits: wallet.credits, recoveryCode: wallet.token, locked: Boolean(wallet.locked), invited: Boolean(wallet.invite_access) });
         response.headers.set('set-cookie', walletCookie(wallet.token));
         return response;
       }
       let wallet = await findWallet(request, env);
-      if (body.accessCode !== env.ROOM_ACCESS_CODE && !wallet?.invite_access) return json({ error: 'The room access code is incorrect.' }, 403);
       if (url.pathname === '/api/checkout') {
         if (!wallet) return json({ error: 'Open your credit wallet first.' }, 401);
         if (wallet.locked) return json({ error: 'This wallet is on hold after a payment reversal. Contact the room owner.' }, 403);
@@ -128,11 +126,11 @@ export default {
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
       return json({ error: 'The question could not be read.' }, 400);
     }
-    if (!env.ROOM_ACCESS_CODE || !env.OPENAI_API_KEY) {
+    if (!env.OPENAI_API_KEY || (!paidMode(env) && !env.ROOM_ACCESS_CODE)) {
       return json({ error: 'Online questions are not configured yet. Please contact the room owner.' }, 503);
     }
     let wallet = paidMode(env) && env.DB ? await findWallet(request, env) : null;
-    if (body.accessCode !== env.ROOM_ACCESS_CODE && !wallet?.invite_access) {
+    if (!paidMode(env) && body.accessCode !== env.ROOM_ACCESS_CODE) {
       return json({ error: 'The room access code is incorrect.' }, 403);
     }
     const claim = typeof body.claim === 'string' ? body.claim.trim() : '';

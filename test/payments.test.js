@@ -105,17 +105,17 @@ test('paid council uses one credit only for a completed review and restores it o
   const DB = database();
   const env = {
     DB, PAYMENTS_MODE: 'test', STRIPE_SECRET_KEY: 'sk_test_fake', STRIPE_WEBHOOK_SECRET: 'whsec_fake',
-    ROOM_ACCESS_CODE: 'invite', OPENAI_API_KEY: 'api-secret',
+    OPENAI_API_KEY: 'api-secret',
     ROOM_LIMIT: { limit: async () => ({ success: true }) },
     ASSETS: { fetch: async () => new Response('asset') }
   };
   const originalFetch = globalThis.fetch;
   try {
-    const walletResponse = await worker.fetch(post('/api/wallet', { accessCode: 'invite' }), env);
+    const walletResponse = await worker.fetch(post('/api/wallet', {}), env);
     assert.equal(walletResponse.status, 200);
     const cookie = walletResponse.headers.get('set-cookie').split(';')[0];
     const wallet = await walletResponse.json();
-    const noCredits = await worker.fetch(post('/api/council', { accessCode: 'invite', claim: 'Are these avalanches critical?', mode: 'QUICK' }, cookie), env);
+    const noCredits = await worker.fetch(post('/api/council', { claim: 'Are these avalanches critical?', mode: 'QUICK' }, cookie), env);
     assert.equal(noCredits.status, 402);
     const session = {
       object: 'checkout.session', id: 'cs_test_3', client_reference_id: null,
@@ -130,19 +130,19 @@ test('paid council uses one credit only for a completed review and restores it o
     const webhook = await worker.fetch(new Request(`${endpoint}/api/stripe-webhook`, { method: 'POST', headers: { 'stripe-signature': header }, body: payload }), env);
     assert.equal(webhook.status, 200);
     globalThis.fetch = async () => Response.json({ error: { code: 'credit_balance_exhausted' } }, { status: 429 });
-    const failed = await worker.fetch(post('/api/council', { accessCode: 'invite', claim: 'Are these avalanches critical?', mode: 'QUICK' }, cookie), env);
+    const failed = await worker.fetch(post('/api/council', { claim: 'Are these avalanches critical?', mode: 'QUICK' }, cookie), env);
     assert.equal(failed.status, 502);
     assert.equal(DB.prepare('SELECT credits FROM wallets WHERE id = ?').bind(id).first().credits, 10);
     globalThis.fetch = async (_url, options) => {
       assert.equal(JSON.parse(options.body).max_output_tokens, 10000);
       return Response.json({ status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' }, output: [] });
     };
-    const incomplete = await worker.fetch(post('/api/council', { accessCode: 'invite', claim: 'Are these avalanches critical?', mode: 'QUICK' }, cookie), env);
+    const incomplete = await worker.fetch(post('/api/council', { claim: 'Are these avalanches critical?', mode: 'QUICK' }, cookie), env);
     assert.equal(incomplete.status, 502);
     assert.match((await incomplete.json()).error, /answer-length limit.*credit was restored/);
     assert.equal(DB.prepare('SELECT credits FROM wallets WHERE id = ?').bind(id).first().credits, 10);
     globalThis.fetch = async () => Response.json({ status: 'completed', output: [{ content: [{ type: 'output_text', text: 'Review.' }] }] });
-    const done = await worker.fetch(post('/api/council', { accessCode: 'invite', claim: 'Are these avalanches critical?', mode: 'QUICK' }, cookie), env);
+    const done = await worker.fetch(post('/api/council', { claim: 'Are these avalanches critical?', mode: 'QUICK' }, cookie), env);
     assert.equal(done.status, 200);
     assert.equal(DB.prepare('SELECT credits FROM wallets WHERE id = ?').bind(id).first().credits, 9);
   } finally { globalThis.fetch = originalFetch; DB.close(); }

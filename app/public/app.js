@@ -375,6 +375,7 @@ reducedMotion.addEventListener('change', () => lenses.forEach((_, index) => upda
 let paidReviews = false;
 let walletOpen = false;
 let inviteAccess = false;
+let roomCodeRequired = true;
 async function walletRequest(path, extra = {}) {
   const response = await fetch(path, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -388,7 +389,7 @@ async function openWallet(path = '/api/wallet', extra = {}) {
   const result = await walletRequest(path, extra);
   walletOpen = true;
   inviteAccess = Boolean(result.invited);
-  $('#room-code-wrap').hidden = inviteAccess;
+  $('#room-code-wrap').hidden = !roomCodeRequired || inviteAccess;
   $('#wallet-status').textContent = result.locked ? 'This balance is on hold after a payment reversal. Contact the room owner.' : `${result.credits} review${result.credits === 1 ? '' : 's'} available`;
   $('#buy-credits').dataset.locked = result.locked ? 'true' : 'false';
   $('#buy-credits').disabled = Boolean(result.locked);
@@ -400,12 +401,14 @@ async function openWallet(path = '/api/wallet', extra = {}) {
 fetch('/api/config').then(response => response.json()).then(async config => {
   if (!['test', 'live'].includes(config.payments)) return;
   paidReviews = true;
+  roomCodeRequired = false;
+  $('#room-code-wrap').hidden = true;
   $('#credits-panel').hidden = false;
   $('#credits-heading').textContent = config.payments === 'test' ? 'Review balance · test mode' : 'Review balance';
   $('#credits-description').textContent = `Full and Quick each use one review. Add 10 for US$5.${config.payments === 'test' ? ' Test payments do not charge a real card.' : ''}`;
   $('#buy-credits').disabled = false;
   const payment = new URL(location.href).searchParams.get('payment');
-  if (payment === 'success') $('#wallet-status').textContent = 'Payment submitted. Enter your room code to refresh your balance after Stripe confirms it.';
+  if (payment === 'success') $('#wallet-status').textContent = 'Payment submitted. Your balance will update after Stripe confirms it.';
   if (payment === 'cancelled') $('#wallet-status').textContent = 'Checkout was cancelled. Your existing credits are safe.';
   const giftToken = location.hash.startsWith('#gift=') ? location.hash.slice(6) : '';
   if (giftToken) {
@@ -420,10 +423,8 @@ fetch('/api/config').then(response => response.json()).then(async config => {
     }
     history.replaceState(null, '', `${location.pathname}${location.search}#question`);
     $('#question').scrollIntoView({ block: 'start' });
-  } else if ($('#room-code').value.trim()) {
-    openWallet().catch(() => {});
   } else {
-    openWallet().catch(() => {}); // Restores a previously claimed invitation from its browser cookie.
+    openWallet().catch(error => { $('#wallet-status').textContent = error.message; });
   }
 }).catch(() => {});
 $('#room-code').addEventListener('input', () => { walletOpen = false; });
@@ -472,7 +473,7 @@ $('#brief-form').addEventListener('submit', async (event) => {
     $('#claim').focus();
     return;
   }
-  if (!roomCode && !inviteAccess) {
+  if (roomCodeRequired && !roomCode && !inviteAccess) {
     status.textContent = 'Enter the room access code before asking the council.';
     $('#room-code').focus();
     return;
