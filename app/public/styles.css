@@ -168,7 +168,6 @@ button { font: inherit; cursor: pointer; }
     inset 0 18px 40px rgba(255, 255, 255, 0.03),
     0 -18px 70px rgba(196, 240, 66, 0.07);
 }
-.table .etch { position: absolute; left: 50%; top: 30%; width: 11%; translate: -50% -50%; opacity: .06; }
 
 /* nameplates on the table edge */
 .nameplate {
@@ -508,7 +507,6 @@ html { scroll-behavior: smooth; }
 .brand-wordmark { display:grid; gap:1px; line-height:1; min-width:max-content; }
 .brand-wordmark-name { font:600 18px/1.1 'Instrument Sans MZ', sans-serif; letter-spacing:.025em; color:#fff; }
 .brand-wordmark-tagline { font:italic 400 9.5px/1.25 'Fraunces MZ', Georgia, serif; color:#c4f042; text-align:justify; text-align-last:justify; }
-.table .etch { opacity:.1; }
 .brand-name { font-size:14px; }
 .stage .seat { padding:0; border:0; background:none; }
 .stage .seat .bust { display:block; animation-delay:calc(var(--i) * -.73s); }
@@ -654,6 +652,12 @@ body { color:#0a1f1c; }
   background:radial-gradient(75% 55% at 50% 38%, #1a3e30 0%, #102c25 55%, #0a1f1c 100%);
   box-shadow:0 16px 42px rgba(10,31,28,.14);
 }
+.hero-mark {
+  position:absolute; z-index:38; top:20px; left:24px;
+  color:#c4f042; font:900 clamp(25px,3vw,38px)/1 var(--font-display);
+  letter-spacing:-.06em; pointer-events:none;
+  text-shadow:0 2px 12px rgba(10,31,28,.65);
+}
 .wall {
   background:repeating-linear-gradient(90deg, rgba(244,241,234,.035) 0 1px, transparent 1px 120px),
     linear-gradient(180deg, transparent 0 46%, rgba(196,240,66,.1) 46.2%, transparent 47%);
@@ -663,7 +667,6 @@ body { color:#0a1f1c; }
   background:radial-gradient(70% 60% at 50% 30%,#27513e 0%,#16362d 58%,#0a1f1c 100%);
   box-shadow:inset 0 1.5px 0 rgba(244,241,234,.3),inset 0 18px 40px rgba(196,240,66,.03),0 -18px 70px rgba(196,240,66,.1);
 }
-.table .etch { width:auto; opacity:.19; color:#c4f042; font:900 clamp(30px,5vw,54px)/1 var(--font-display); letter-spacing:-.06em; }
 .stage .nameplate { background:rgba(10,31,28,.86); border-color:rgba(244,241,234,.23); }
 .stage .nameplate.selected { border-color:#c4f042; box-shadow:0 0 0 2px rgba(196,240,66,.18); }
 .stage .nameplate.speaking { border-color:#c4f042; }
@@ -746,6 +749,10 @@ body { color:#0a1f1c; }
   #request-text { width:100% !important; height:auto !important; min-height:0 !important; max-height:none !important; overflow:visible !important; padding:0 !important; border:0 !important; background:#fff !important; color:#0a1f1c !important; white-space:pre-wrap !important; overflow-wrap:anywhere !important; font:10pt/1.45 Georgia, serif !important; }
 }
 .disclaimer { color:#3d5a52; max-width:110ch; margin-inline:auto; line-height:1.5; }
+.site-footer {
+  border-top:1px solid #d9ded3; padding:18px 24px 22px;
+  color:#3d5a52; font:500 12px/1.4 var(--font-label); text-align:center;
+}
 @media (min-width:1221px) { .stage { min-height:660px; } }
 @media (max-width:820px) {
   .stage { background:radial-gradient(75% 55% at 50% 38%,#1a3e30 0%,#102c25 55%,#0a1f1c 100%); }
@@ -753,6 +760,7 @@ body { color:#0a1f1c; }
   .phase-preview { position:static; transform:none; width:100%; margin:auto; }
 }
 @media (max-width:520px) {
+  .hero-mark { top:12px; left:14px; font-size:24px; }
   .brand-wordmark-name { font-size:16px; }
   .brand-wordmark-tagline { font-size:8px; }
   .brand-name { font-size:11px; }
