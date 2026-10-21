@@ -18,7 +18,6 @@ function showReview(review) {
   $('#dialog-description').textContent = 'One AI model applied seven simulated research lenses. This is not their participation or independent peer review.';
   $('#copy-request').textContent = 'Copy review';
   $('#download-pdf').hidden = false;
-  $('#save-pdf').hidden = false;
   $('#copy-status').textContent = '';
   $('#request-dialog').showModal();
 }
@@ -34,7 +33,6 @@ function showReadyResult() {
 }
 if (latestReview) showReadyResult();
 $('#view-review').addEventListener('click', () => showReview(latestReview));
-$('#save-pdf').addEventListener('click', () => window.print());
 async function downloadCurrentReview(button, status) {
   if (!latestReview) {
     status.textContent = 'No review is ready yet. Ask the council online first; then download its PDF here.';
@@ -50,7 +48,7 @@ async function downloadCurrentReview(button, status) {
     await downloadReviewPdf(latestReview);
     status.textContent = 'PDF downloaded. Check your browser downloads.';
   } catch {
-    status.textContent = 'PDF download failed. Open the review and use Print / Save PDF or Copy review.';
+    status.textContent = 'PDF download failed. Please try again; you can still copy the review.';
   } finally {
     button.disabled = false;
     button.textContent = originalLabel;
@@ -522,7 +520,6 @@ $('#prepare-request').addEventListener('click', () => {
   $('#dialog-description').textContent = 'Copy the request below and paste it into your Codex chat with this room installed.';
   $('#copy-request').textContent = 'Copy request';
   $('#download-pdf').hidden = true;
-  $('#save-pdf').hidden = true;
   $('#copy-status').textContent = '';
   $('#request-dialog').showModal();
 });
