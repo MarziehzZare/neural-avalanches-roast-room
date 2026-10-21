@@ -17,6 +17,11 @@ await mkdir(path.join(outputDir, 'vendor'), { recursive: true });
 for (const file of ['pdfmake.min.js', 'vfs_fonts.js']) {
   await cp(path.resolve(appDir, '..', 'node_modules', 'pdfmake', 'build', file), path.join(outputDir, 'vendor', file));
 }
+const pdfBytes = await readFile(path.join(outputDir, 'pdf-export.js'));
+const pdfVersion = createHash('sha256').update(pdfBytes).digest('hex').slice(0, 12);
+const appPath = path.join(outputDir, 'app.js');
+const appSource = await readFile(appPath, 'utf8');
+await writeFile(appPath, appSource.replace("import('/pdf-export.js')", `import('/pdf-export.js?v=${pdfVersion}')`));
 let html = await readFile(path.join(outputDir, 'index.html'), 'utf8');
 for (const asset of ['styles.css', 'app.js']) {
   const bytes = await readFile(path.join(outputDir, asset));
