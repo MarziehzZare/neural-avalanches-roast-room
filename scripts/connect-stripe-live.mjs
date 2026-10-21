@@ -17,6 +17,20 @@ if (!key.startsWith('sk_live_') || key.length < 20) {
   process.exit(1);
 }
 
+let keyCheck;
+try {
+  keyCheck = await fetch('https://api.stripe.com/v1/account', {
+    headers: { authorization: `Bearer ${key}` }
+  });
+} catch {
+  console.error('Could not reach Stripe to check the live key. No secret was uploaded.');
+  process.exit(1);
+}
+if (!keyCheck.ok) {
+  console.error('Stripe rejected this live key. Copy the full, active secret key from Stripe Dashboard. No secret was uploaded.');
+  process.exit(1);
+}
+
 function putSecret(name, value) {
   const result = spawnSync('npx', ['--yes', 'wrangler', 'secret', 'put', name, '--config', 'wrangler.live.jsonc'], {
     cwd: root, input: `${value}\n`, encoding: 'utf8', timeout: 120000
@@ -51,7 +65,7 @@ try {
 }
 const endpoint = await response.json().catch(() => ({}));
 if (!response.ok || typeof endpoint.secret !== 'string' || !endpoint.secret.startsWith('whsec_')) {
-  console.error(`Stripe could not create the live webhook: ${endpoint.error?.message || response.status}`);
+  console.error(`Stripe could not create the live webhook (HTTP ${response.status}). Check the key's access to webhook endpoints.`);
   process.exit(1);
 }
 putSecret('STRIPE_WEBHOOK_SECRET', endpoint.secret);
