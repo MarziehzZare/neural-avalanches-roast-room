@@ -28,7 +28,7 @@ export async function hashToken(token) {
 export async function findWallet(request, env) {
   const token = readCookie(request);
   if (!token) return null;
-  const wallet = await env.DB.prepare('SELECT id, credits FROM wallets WHERE token_hash = ?')
+  const wallet = await env.DB.prepare('SELECT id, credits, locked FROM wallets WHERE token_hash = ?')
     .bind(await hashToken(token)).first();
   return wallet ? { ...wallet, token } : null;
 }
@@ -38,18 +38,18 @@ export async function createWallet(env) {
   const id = crypto.randomUUID();
   await env.DB.prepare('INSERT INTO wallets (id, token_hash, credits) VALUES (?, ?, 0)')
     .bind(id, await hashToken(token)).run();
-  return { id, token, credits: 0 };
+  return { id, token, credits: 0, locked: 0 };
 }
 
 export async function recoverWallet(token, env) {
   if (typeof token !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
-  const wallet = await env.DB.prepare('SELECT id, credits FROM wallets WHERE token_hash = ?')
+  const wallet = await env.DB.prepare('SELECT id, credits, locked FROM wallets WHERE token_hash = ?')
     .bind(await hashToken(token)).first();
   return wallet ? { ...wallet, token } : null;
 }
 
 export async function spendCredit(walletId, env) {
-  const result = await env.DB.prepare('UPDATE wallets SET credits = credits - 1 WHERE id = ? AND credits > 0 RETURNING credits')
+  const result = await env.DB.prepare('UPDATE wallets SET credits = credits - 1 WHERE id = ? AND credits > 0 AND locked = 0 RETURNING credits')
     .bind(walletId).first();
   return result != null;
 }
@@ -106,16 +106,34 @@ export async function verifyStripeEvent(payload, header, secret, now = Date.now(
 }
 
 export async function grantPaidCredits(event, env) {
+  if (['charge.refunded', 'charge.dispute.created'].includes(event.type)) {
+    const charge = event.data?.object;
+    let paymentIntent = charge?.payment_intent;
+    if (!paymentIntent && event.type === 'charge.dispute.created' && typeof charge?.charge === 'string' && charge.charge.startsWith('ch_')) {
+      const response = await fetch(`https://api.stripe.com/v1/charges/${encodeURIComponent(charge.charge)}`, {
+        headers: { authorization: `Bearer ${env.STRIPE_SECRET_KEY}` }
+      });
+      if (!response.ok) throw new Error('Could not look up disputed charge.');
+      paymentIntent = (await response.json()).payment_intent;
+    }
+    if (typeof paymentIntent !== 'string' || !paymentIntent.startsWith('pi_')) return 'ignored';
+    if (event.type === 'charge.refunded' && !charge.refunded && !(charge.amount_refunded > 0)) return 'ignored';
+    // The trigger removes unused credits and locks the wallet once for this purchase.
+    await env.DB.prepare('UPDATE paid_checkouts SET reversed_at = CURRENT_TIMESTAMP WHERE payment_intent = ? AND reversed_at IS NULL')
+      .bind(paymentIntent).run();
+    return 'accepted';
+  }
   if (!['checkout.session.completed', 'checkout.session.async_payment_succeeded'].includes(event.type)) return 'ignored';
   const session = event.data?.object;
   const walletId = session?.client_reference_id;
-  if (session?.object !== 'checkout.session' || !/^cs_(test|live)_/.test(session.id || '') ||
+  const sessionPrefix = env.PAYMENTS_MODE === 'live' ? 'cs_live_' : 'cs_test_';
+  if (session?.object !== 'checkout.session' || !session.id?.startsWith(sessionPrefix) ||
       session.payment_status !== 'paid' || session.mode !== 'payment' ||
       session.amount_total !== 500 || session.currency !== 'usd' ||
       session.metadata?.wallet_id !== walletId || session.metadata?.credit_count !== '10' ||
-      typeof walletId !== 'string') return 'ignored';
+      typeof walletId !== 'string' || typeof session.payment_intent !== 'string') return 'ignored';
   // SQLite trigger grants ten credits only for a new session ID. Webhook retries stay harmless.
-  await env.DB.prepare('INSERT OR IGNORE INTO paid_checkouts (session_id, wallet_id, amount_cents) SELECT ?, id, 500 FROM wallets WHERE id = ?')
-    .bind(session.id, walletId).run();
+  await env.DB.prepare('INSERT OR IGNORE INTO paid_checkouts (session_id, wallet_id, amount_cents, payment_intent) SELECT ?, id, 500, ? FROM wallets WHERE id = ? AND locked = 0')
+    .bind(session.id, session.payment_intent, walletId).run();
   return 'accepted';
 }

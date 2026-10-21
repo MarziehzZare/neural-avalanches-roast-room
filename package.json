@@ -8,6 +8,7 @@
     "test": "node --test test/*.test.js",
     "dev:online": "npx --yes wrangler dev --port 4732",
     "deploy:test": "npm run build:share && npx --yes wrangler deploy --config wrangler.test.jsonc",
+    "deploy:live": "npm run build:share && npx --yes wrangler deploy --config wrangler.live.jsonc",
     "deploy": "npm run build:share && npx --yes wrangler deploy"
   },
   "engines": {

@@ -337,20 +337,25 @@ async function walletRequest(path, extra = {}) {
 async function openWallet(path = '/api/wallet', extra = {}) {
   const result = await walletRequest(path, extra);
   walletOpen = true;
-  $('#wallet-status').textContent = `${result.credits} review credit${result.credits === 1 ? '' : 's'} available.`;
-  $('#buy-credits').disabled = false;
+  $('#wallet-status').textContent = result.locked ? 'This wallet is on hold after a payment reversal. Contact the room owner.' : `${result.credits} review credit${result.credits === 1 ? '' : 's'} available.`;
+  $('#buy-credits').dataset.locked = result.locked ? 'true' : 'false';
+  $('#buy-credits').disabled = result.locked || !$('#recovery-saved').checked;
   $('#recovery-code').value = result.recoveryCode;
   $('#recovery-details').hidden = false;
+  $('#recovery-details').open = true;
   return result;
 }
 fetch('/api/config').then(response => response.json()).then(config => {
-  if (config.payments !== 'test') return;
+  if (!['test', 'live'].includes(config.payments)) return;
   paidReviews = true;
   $('#credits-panel').hidden = false;
+  $('#credits-heading').textContent = config.payments === 'test' ? 'Review credits · Stripe test mode' : 'Review credits';
+  $('#credits-description').textContent = `10 reviews for US$5. Full and Quick each use one credit.${config.payments === 'test' ? ' Test payments do not charge a real card.' : ''}`;
   const payment = new URL(location.href).searchParams.get('payment');
-  if (payment === 'success') $('#wallet-status').textContent = 'Payment completed. Open your wallet to see credits after Stripe confirms it.';
+  if (payment === 'success') $('#wallet-status').textContent = 'Payment submitted. Re-enter your room code and open your wallet to see credits after Stripe confirms it.';
   if (payment === 'cancelled') $('#wallet-status').textContent = 'Checkout was cancelled. Your existing credits are safe.';
 }).catch(() => {});
+$('#recovery-saved').addEventListener('change', () => { $('#buy-credits').disabled = !walletOpen || $('#buy-credits').dataset.locked === 'true' || !$('#recovery-saved').checked; });
 $('#open-wallet').addEventListener('click', async () => {
   try { await openWallet(); }
   catch (error) { $('#wallet-status').textContent = error.message; }

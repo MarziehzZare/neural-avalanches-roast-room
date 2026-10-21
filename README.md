@@ -8,7 +8,7 @@ With Node.js 20 or newer, run `npm start` and open <http://localhost:4731>. The 
 
 ## Share with collaborators
 
-The easiest route for nontechnical collaborators is the [online room](https://neural-avalanches-roast-room.vieclinic.workers.dev), a room access code, and [COLLABORATOR-GUIDE.md](COLLABORATOR-GUIDE.md). The private GitHub repository is for maintaining the code. The 11–12 second [demo video](videos/neural-avalanches-demo/neural-avalanches-demo.mp4) shows the actual interface and scripted interaction. The site and server-side API key are configured; live answers require API credit in the owner's OpenAI organization before sharing the link; see [DEPLOY.md](DEPLOY.md).
+The [original online room](https://neural-avalanches-roast-room.vieclinic.workers.dev) uses a shared access code and [COLLABORATOR-GUIDE.md](COLLABORATOR-GUIDE.md). A separate [Stripe test room](https://neural-avalanches-roast-room-test.vieclinic.workers.dev) has a working 10-reviews-for-US$5 **test** checkout; see [PAYMENTS.md](PAYMENTS.md) for the live setup and [PAID-COLLABORATOR-GUIDE.md](PAID-COLLABORATOR-GUIDE.md) for the future paid-room instructions. The private GitHub repository is for maintaining the code. The 11–12 second [demo video](videos/neural-avalanches-demo/neural-avalanches-demo.mp4) shows the actual interface and scripted interaction.
 
 A separate [Stripe test-mode credit flow](PAYMENTS.md) is under development. It offers 10 reviews for US$5 in a test checkout; it does not accept real payments yet.
 

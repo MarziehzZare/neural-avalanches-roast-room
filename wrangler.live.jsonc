@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "neural-avalanches-roast-room-paid",
+  "main": "./worker/index.js",
+  "compatibility_date": "2026-10-20",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "vars": { "PAYMENTS_MODE": "live" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "neural-avalanches-credits-live",
+      "database_id": "411ae50c-bd8d-44cd-ac05-38507bee27cb",
+      "migrations_dir": "./migrations"
+    }
+  ],
+  "ratelimits": [
+    { "name": "ROOM_LIMIT", "namespace_id": "1003", "simple": { "limit": 3, "period": 60 } }
+  ]
+}

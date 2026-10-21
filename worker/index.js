@@ -49,19 +49,20 @@ async function readJson(request) {
 }
 
 function paidMode(env) {
-  return env.PAYMENTS_MODE === 'test';
+  return ['test', 'live'].includes(env.PAYMENTS_MODE);
 }
 
 function paymentReady(env) {
+  const keyPrefix = env.PAYMENTS_MODE === 'live' ? 'sk_live_' : 'sk_test_';
   return paidMode(env) && env.DB && env.ROOM_ACCESS_CODE && env.OPENAI_API_KEY &&
-    env.STRIPE_SECRET_KEY?.startsWith('sk_test_') && env.STRIPE_WEBHOOK_SECRET?.startsWith('whsec_');
+    env.STRIPE_SECRET_KEY?.startsWith(keyPrefix) && env.STRIPE_WEBHOOK_SECRET?.startsWith('whsec_');
 }
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === '/api/config' && request.method === 'GET') {
-      return json({ payments: paymentReady(env) ? 'test' : 'off', packageCredits: 10, packageUsd: 5 });
+      return json({ payments: paymentReady(env) ? env.PAYMENTS_MODE : 'off', packageCredits: 10, packageUsd: 5 });
     }
     if (url.pathname === '/api/stripe-webhook' && request.method === 'POST') {
       if (!paymentReady(env)) return json({ error: 'Payment service unavailable.' }, 503);
@@ -80,19 +81,20 @@ export default {
       if (url.pathname === '/api/wallet/recover') {
         const wallet = await recoverWallet(body.recoveryCode, env);
         if (!wallet) return json({ error: 'Recovery code not found.' }, 404);
-        const response = json({ credits: wallet.credits, recoveryCode: wallet.token });
+        const response = json({ credits: wallet.credits, recoveryCode: wallet.token, locked: Boolean(wallet.locked) });
         response.headers.set('set-cookie', walletCookie(wallet.token));
         return response;
       }
       let wallet = await findWallet(request, env);
       if (url.pathname === '/api/checkout') {
         if (!wallet) return json({ error: 'Open your credit wallet first.' }, 401);
+        if (wallet.locked) return json({ error: 'This wallet is on hold after a payment reversal. Contact the room owner.' }, 403);
         const checkoutUrl = await createCheckout(wallet.id, request.url, env).catch(() => null);
         return checkoutUrl ? json({ url: checkoutUrl }) : json({ error: 'Stripe Checkout is temporarily unavailable.' }, 502);
       }
       let newWallet = false;
       if (!wallet) { wallet = await createWallet(env); newWallet = true; }
-      const response = json({ credits: wallet.credits, recoveryCode: wallet.token });
+      const response = json({ credits: wallet.credits, recoveryCode: wallet.token, locked: Boolean(wallet.locked) });
       if (newWallet) response.headers.set('set-cookie', walletCookie(wallet.token));
       return response;
     }
@@ -131,6 +133,7 @@ export default {
       if (!paymentReady(env)) return json({ error: 'Paid reviews are not configured yet.' }, 503);
       wallet = await findWallet(request, env);
       if (!wallet) return json({ error: 'Open your credit wallet first.' }, 401);
+      if (wallet.locked) return json({ error: 'This wallet is on hold after a payment reversal. Contact the room owner.' }, 403);
       if (!await spendCredit(wallet.id, env)) return json({ error: 'No credits remain. Buy 10 reviews to continue.' }, 402);
     }
 

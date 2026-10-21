@@ -9,6 +9,7 @@ import { createCheckout, grantPaidCredits, verifyStripeEvent } from '../worker/p
 function database() {
   const sqlite = new DatabaseSync(':memory:');
   sqlite.exec(readFileSync(new URL('../migrations/0001_credits.sql', import.meta.url), 'utf8'));
+  sqlite.exec(readFileSync(new URL('../migrations/0002_reversals.sql', import.meta.url), 'utf8'));
   return {
     prepare(sql) {
       let values = [];
@@ -70,7 +71,7 @@ test('verified checkout grants credits once, and only after paid status', async 
     DB.prepare('INSERT INTO wallets (id, token_hash) VALUES (?, ?)').bind('wallet-1', 'hash').run();
     const session = {
       object: 'checkout.session', id: 'cs_test_1', client_reference_id: 'wallet-1',
-      payment_status: 'paid', mode: 'payment', amount_total: 500, currency: 'usd',
+      payment_status: 'paid', mode: 'payment', amount_total: 500, currency: 'usd', payment_intent: 'pi_test_1',
       metadata: { wallet_id: 'wallet-1', credit_count: '10' }
     };
     const event = { type: 'checkout.session.completed', data: { object: session } };
@@ -100,7 +101,7 @@ test('paid council uses one credit only for a completed review and restores it o
     assert.equal(noCredits.status, 402);
     const session = {
       object: 'checkout.session', id: 'cs_test_3', client_reference_id: null,
-      payment_status: 'paid', mode: 'payment', amount_total: 500, currency: 'usd',
+      payment_status: 'paid', mode: 'payment', amount_total: 500, currency: 'usd', payment_intent: 'pi_test_3',
       metadata: { wallet_id: null, credit_count: '10' }
     };
     const tokenHash = await (await import('../worker/payments.js')).hashToken(wallet.recoveryCode);
@@ -118,5 +119,46 @@ test('paid council uses one credit only for a completed review and restores it o
     const done = await worker.fetch(post('/api/council', { accessCode: 'invite', claim: 'Are these avalanches critical?', mode: 'QUICK' }, cookie), env);
     assert.equal(done.status, 200);
     assert.equal(DB.prepare('SELECT credits FROM wallets WHERE id = ?').bind(id).first().credits, 9);
+  } finally { globalThis.fetch = originalFetch; DB.close(); }
+});
+
+test('a refunded or disputed purchase locks the wallet and cannot revoke twice', async () => {
+  const DB = database();
+  try {
+    DB.prepare('INSERT INTO wallets (id, token_hash) VALUES (?, ?)').bind('wallet-1', 'hash').run();
+    const session = {
+      object: 'checkout.session', id: 'cs_live_1', client_reference_id: 'wallet-1',
+      payment_status: 'paid', mode: 'payment', amount_total: 500, currency: 'usd', payment_intent: 'pi_live_1',
+      metadata: { wallet_id: 'wallet-1', credit_count: '10' }
+    };
+    await grantPaidCredits({ type: 'checkout.session.completed', data: { object: session } }, { DB, PAYMENTS_MODE: 'live' });
+    assert.equal(DB.prepare('SELECT credits FROM wallets WHERE id = ?').bind('wallet-1').first().credits, 10);
+    const reversal = { type: 'charge.refunded', data: { object: { payment_intent: 'pi_live_1', refunded: true, amount_refunded: 500 } } };
+    await grantPaidCredits(reversal, { DB, PAYMENTS_MODE: 'live' });
+    await grantPaidCredits(reversal, { DB, PAYMENTS_MODE: 'live' });
+    await grantPaidCredits({ type: 'charge.dispute.created', data: { object: { payment_intent: 'pi_live_1' } } }, { DB, PAYMENTS_MODE: 'live' });
+    assert.deepEqual({ ...DB.prepare('SELECT credits, locked FROM wallets WHERE id = ?').bind('wallet-1').first() }, { credits: 0, locked: 1 });
+    await grantPaidCredits({ type: 'checkout.session.completed', data: { object: { ...session, id: 'cs_live_2', payment_intent: 'pi_live_2' } } }, { DB, PAYMENTS_MODE: 'live' });
+    assert.equal(DB.prepare('SELECT credits FROM wallets WHERE id = ?').bind('wallet-1').first().credits, 0);
+  } finally { DB.close(); }
+});
+
+test('a dispute without an embedded PaymentIntent resolves its charge', async () => {
+  const DB = database();
+  const originalFetch = globalThis.fetch;
+  try {
+    DB.prepare('INSERT INTO wallets (id, token_hash) VALUES (?, ?)').bind('wallet-2', 'hash-2').run();
+    await grantPaidCredits({ type: 'checkout.session.completed', data: { object: {
+      object: 'checkout.session', id: 'cs_live_3', client_reference_id: 'wallet-2',
+      payment_status: 'paid', mode: 'payment', amount_total: 500, currency: 'usd', payment_intent: 'pi_live_3',
+      metadata: { wallet_id: 'wallet-2', credit_count: '10' }
+    } } }, { DB, PAYMENTS_MODE: 'live' });
+    globalThis.fetch = async (url, options) => {
+      assert.equal(url, 'https://api.stripe.com/v1/charges/ch_live_3');
+      assert.equal(options.headers.authorization, 'Bearer sk_live_fake');
+      return Response.json({ payment_intent: 'pi_live_3' });
+    };
+    await grantPaidCredits({ type: 'charge.dispute.created', data: { object: { charge: 'ch_live_3', payment_intent: null } } }, { DB, STRIPE_SECRET_KEY: 'sk_live_fake' });
+    assert.equal(DB.prepare('SELECT locked FROM wallets WHERE id = ?').bind('wallet-2').first().locked, 1);
   } finally { globalThis.fetch = originalFetch; DB.close(); }
 });

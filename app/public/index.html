@@ -107,11 +107,11 @@
         <label for="room-code">Room access code</label>
         <input id="room-code" type="password" autocomplete="off" required placeholder="Code shared by the room owner">
         <div class="credits-panel" id="credits-panel" hidden>
-          <strong>Review credits · Stripe test mode</strong>
-          <p>10 reviews for US$5. Full and Quick each use one credit. Test payments do not charge a real card.</p>
+          <strong id="credits-heading">Review credits</strong>
+          <p id="credits-description">10 reviews for US$5. Full and Quick each use one credit.</p>
           <p id="wallet-status" role="status">Enter your room code, then open your wallet.</p>
           <div class="row"><button class="ghost" type="button" id="open-wallet">Open my wallet</button><button class="ghost" type="button" id="buy-credits" disabled>Buy 10 credits</button></div>
-          <details id="recovery-details" hidden><summary>Save your recovery code</summary><p>Keep this private. It restores your credits if you change browsers or devices.</p><input id="recovery-code" type="text" readonly aria-label="Wallet recovery code"><button class="ghost" type="button" id="copy-recovery">Copy code</button></details>
+          <details id="recovery-details" hidden><summary>Save your recovery code before buying</summary><p>Keep this private. It restores your credits if you change browsers or devices.</p><input id="recovery-code" type="text" readonly aria-label="Wallet recovery code"><button class="ghost" type="button" id="copy-recovery">Copy code</button><label class="recovery-ack"><input type="checkbox" id="recovery-saved"> I saved this code somewhere private</label></details>
           <div class="row"><input id="restore-code" type="text" placeholder="Existing recovery code" aria-label="Existing recovery code"><button class="ghost" type="button" id="restore-wallet">Restore wallet</button></div>
         </div>
         <button class="convene" type="submit">Ask the council online</button>
