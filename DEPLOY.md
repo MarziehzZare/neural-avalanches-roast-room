@@ -1,12 +1,12 @@
 # Deploy the private online room
 
-The illustrated site is deployed at <https://neural-avalanches-roast-room.vieclinic.workers.dev>. Its online answers require an OpenAI API key. Do not put the key in GitHub, in `dist/`, in a browser script, or in chat.
+The illustrated site is deployed at <https://neural-avalanches-roast-room.vieclinic.workers.dev>. The OpenAI API key is stored in Cloudflare. A live test on 2026-10-20 returned `credit_balance_exhausted`, so the account needs API credit before online answers will work. Do not put the key in GitHub, in `dist/`, in a browser script, or in chat.
 
 1. Run `npm run build:share` and `npm test`.
 2. Sign in to Cloudflare with `npx --yes wrangler login` and check with `npx --yes wrangler whoami`. The owner has already signed in on the current machine.
-3. Create an OpenAI API key at <https://platform.openai.com/api-keys>. Set `OPENAI_API_KEY` with `npx --yes wrangler secret put OPENAI_API_KEY` and paste the key at the terminal prompt. API billing is separate from ChatGPT billing.
+3. `OPENAI_API_KEY` has been stored as a Cloudflare secret. If rotating it, create a new key at <https://platform.openai.com/api-keys> and set it with `npx --yes wrangler secret put OPENAI_API_KEY`. Paste the key at the terminal prompt. API billing is separate from ChatGPT billing. If requests report `credit_balance_exhausted`, add credits at <https://platform.openai.com/settings/organization/billing/overview>. OpenAI's current minimum prepaid purchase is $5; review the automatic recharge setting before purchase.
 4. `ROOM_ACCESS_CODE` has already been set in Cloudflare. The owner should send that code separately from the room link. Replace it if it is shared beyond the group.
-5. The site has already been deployed. After adding the API key, test a short, nonconfidential question in both FULL and QUICK modes before sending the URL to collaborators. For later code changes, run `npm run deploy`.
+5. The site has already been deployed. After API credits become available, test a short, nonconfidential question in both FULL and QUICK modes before sending the URL to collaborators. For later code changes, run `npm run deploy`.
 6. Apply [Cloudflare Access](https://developers.cloudflare.com/cloudflare-one/applications/configure-apps/self-hosted-apps/) to the Worker URL for the invited collaborators. The room code is a second gate. Review [OpenAI API usage limits and spending controls](https://platform.openai.com/settings/organization/limits) and set a budget you are comfortable with.
 
 For local Worker development, create a **local only** `.dev.vars` file in this folder containing `OPENAI_API_KEY="..."` and `ROOM_ACCESS_CODE="..."`. `.dev.vars` is excluded from the release package. Then run `npm run build:share` and `npm run dev:online`; open <http://localhost:4732>. Never commit `.dev.vars`.

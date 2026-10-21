@@ -1,6 +1,6 @@
 # Using the Neural Avalanches Roast Room
 
-1. Open the [online room](https://neural-avalanches-roast-room.vieclinic.workers.dev) and enter the room access code shared by Marzieh when you ask a question. You do not need GitHub, a terminal, or an OpenAI account. Online answers become available after the owner adds the API key.
+1. Open the [online room](https://neural-avalanches-roast-room.vieclinic.workers.dev) and enter the room access code shared by Marzieh when you ask a question. You do not need GitHub, a terminal, or an OpenAI account. The owner will confirm when live answers are enabled.
 2. Click a portrait to see the kind of question that research lens asks. The tabs show the stages of the review. **Watch all seven lenses** plays a short, scripted example of who speaks to whom and why.
 3. In **Your question**, write the exact claim or research question. Include the system or species, signal type, how avalanches were defined, and any observations or paper links you can share. It is fine to leave unknown details unknown.
 4. Choose **Full council** for openings, debate, and ratification, or **Quick** for openings and debate with final positions. Click **Ask the council online**. A review may take a little time; keep the page open. You can copy the resulting review.
