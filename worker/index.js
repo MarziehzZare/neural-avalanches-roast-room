@@ -11,6 +11,19 @@ const sources = [
   ['di Santo et al. 2018, synchronization-edge model, preprint v1', 'https://arxiv.org/abs/1801.10356v1'],
   ['di Santo et al. 2016, bistability model, preprint v2', 'https://arxiv.org/html/1605.05161v2']
 ];
+const allowedSourceUrls = new Set(sources.map(([, url]) => url));
+
+function auditLinks(text) {
+  let removed = 0;
+  const reviewed = text.replace(/https?:\/\/[^\s)\]>]+/g, match => {
+    const url = match.replace(/[.,;]+$/, '');
+    const punctuation = match.slice(url.length);
+    if (allowedSourceUrls.has(url)) return match;
+    removed++;
+    return `[unverified link omitted]${punctuation}`;
+  });
+  return removed ? `${reviewed}\n\nLink audit: ${removed} unverified link(s) omitted.` : reviewed;
+}
 
 const instructions = `You chair a neural-avalanche research review. Apply seven editorial, simulated lenses: John M. Beggs (branching and repertoire), Dietmar Plenz (LFP measurement and perturbation/function), Dante R. Chialvo (macroscopic cross-scale signatures), Miguel A. Muñoz (transition identity, synchronization and bistability), Alain Destexhe (noncritical stochastic alternatives), Viola Priesemann (drive and subsampling-aware inference), and Anna Levina (adaptive mechanisms and finite-size/subsampling limits). These names are lens labels grounded in selected published work, not these people's participation, endorsement, current opinions, or predicted advice. Do not impersonate them, use first-person quotations, or invent private beliefs.
 
@@ -94,6 +107,6 @@ export default {
     if (!review || result.status === 'incomplete') {
       return json({ error: 'The review ended before a complete answer was ready. Please try Quick mode.' }, 502);
     }
-    return json({ review, usage: result.usage || null });
+    return json({ review: auditLinks(review), usage: result.usage || null });
   }
 };

@@ -8,7 +8,7 @@ With Node.js 20 or newer, run `npm start` and open <http://localhost:4731>. The 
 
 ## Share with collaborators
 
-The easiest route for nontechnical collaborators is a private online link, a room access code, and [COLLABORATOR-GUIDE.md](COLLABORATOR-GUIDE.md). The private GitHub repository is for maintaining the code. The 11–12 second [demo video](videos/neural-avalanches-demo/neural-avalanches-demo.mp4) shows the actual interface and scripted interaction. The room's online answer service is not active until deployed with the owner's Cloudflare and OpenAI credentials; see [DEPLOY.md](DEPLOY.md).
+The easiest route for nontechnical collaborators is the [online room](https://neural-avalanches-roast-room.vieclinic.workers.dev), a room access code, and [COLLABORATOR-GUIDE.md](COLLABORATOR-GUIDE.md). The private GitHub repository is for maintaining the code. The 11–12 second [demo video](videos/neural-avalanches-demo/neural-avalanches-demo.mp4) shows the actual interface and scripted interaction. The site is deployed, but its online answer service remains disabled until the owner adds an OpenAI API key; see [DEPLOY.md](DEPLOY.md).
 
 ## How the online review works
 

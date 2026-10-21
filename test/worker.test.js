@@ -57,3 +57,22 @@ test('returns a clear error when secrets are missing', async () => {
   const result = await worker.fetch(request({ claim: 'A criticality claim' }), { ASSETS: env.ASSETS });
   assert.equal(result.status, 503);
 });
+
+test('omits links outside the curated source catalog', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => Response.json({
+    status: 'completed',
+    output: [{ content: [{ type: 'output_text', text: 'Known: https://www.nature.com/articles/ncomms15140 Unknown: https://example.test/fake-paper' }] }]
+  });
+  try {
+    const result = await worker.fetch(request({
+      claim: 'Do these avalanches prove criticality?', mode: 'QUICK', accessCode: 'demo-secret'
+    }), env);
+    const { review } = await result.json();
+    assert.match(review, /https:\/\/www\.nature\.com\/articles\/ncomms15140/);
+    assert.doesNotMatch(review, /example\.test/);
+    assert.match(review, /unverified link/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
