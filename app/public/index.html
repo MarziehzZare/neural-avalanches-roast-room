@@ -111,9 +111,11 @@
           <strong id="credits-heading">Review balance</strong>
           <p class="balance-value" id="wallet-status" role="status">Checking your review balance…</p>
           <p id="credits-description">Full and Quick each use one review. Add 10 for US$5.</p>
+          <p class="wallet-browser-note">Credits are saved in this browser. To use them elsewhere, save your private backup code below.</p>
+          <p class="wallet-restore-note" id="wallet-restore-note" hidden>Already bought reviews in another browser? Restore them below before buying again.</p>
           <div class="row"><button class="ghost" type="button" id="open-wallet">Refresh balance</button><button class="ghost" type="button" id="buy-credits" disabled>Buy 10 reviews · US$5</button></div>
-          <details id="recovery-details" hidden><summary>Keep your credits when switching devices</summary><p>Save this private backup code before buying. It restores your balance if you change browsers or devices.</p><div class="row"><input id="recovery-code" type="text" readonly aria-label="Private backup code"><button class="ghost" type="button" id="copy-recovery">Copy backup code</button></div><label class="recovery-ack"><input type="checkbox" id="recovery-saved"> I saved my backup code privately</label></details>
-          <details id="restore-details"><summary>Already have credits on another device?</summary><p>Enter the private backup code you saved there.</p><div class="row"><input id="restore-code" type="text" placeholder="Private backup code" aria-label="Private backup code"><button class="ghost" type="button" id="restore-wallet">Restore credits</button></div></details>
+          <details id="recovery-details" hidden><summary>Keep your credits when switching devices</summary><p>Save this private backup code somewhere private. It restores your balance in another browser or device.</p><div class="row"><input id="recovery-code" type="text" readonly aria-label="Private backup code"><button class="ghost" type="button" id="copy-recovery">Copy backup code</button></div></details>
+          <details id="restore-details"><summary>Use credits from another browser</summary><p>Enter the private backup code you saved there.</p><div class="row"><input id="restore-code" type="text" placeholder="Private backup code" aria-label="Private backup code"><button class="ghost" type="button" id="restore-wallet">Restore credits</button></div></details>
         </div>
         <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
         <button class="convene" type="submit">Ask the council online</button>

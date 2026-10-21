@@ -391,9 +391,9 @@ async function openWallet(path = '/api/wallet', extra = {}) {
   inviteAccess = Boolean(result.invited);
   $('#room-code-wrap').hidden = !roomCodeRequired || inviteAccess;
   $('#wallet-status').textContent = result.locked ? 'This balance is on hold after a payment reversal. Contact the room owner.' : `${result.credits} review${result.credits === 1 ? '' : 's'} available`;
+  $('#wallet-restore-note').hidden = result.credits !== 0;
   $('#buy-credits').dataset.locked = result.locked ? 'true' : 'false';
   $('#buy-credits').disabled = Boolean(result.locked);
-  if ($('#recovery-code').value !== result.recoveryCode) $('#recovery-saved').checked = false;
   $('#recovery-code').value = result.recoveryCode;
   $('#recovery-details').hidden = false;
   return result;
@@ -441,18 +441,12 @@ $('#restore-wallet').addEventListener('click', async () => {
 });
 $('#copy-recovery').addEventListener('click', async () => {
   await navigator.clipboard.writeText($('#recovery-code').value);
-  $('#wallet-status').textContent = 'Backup code copied. Save it privately, then tick the box below before buying.';
+  $('#wallet-status').textContent = 'Backup code copied. Save it privately so you can restore credits in another browser.';
 });
 $('#buy-credits').addEventListener('click', async () => {
   const button = $('#buy-credits');
   try {
     if (!walletOpen) await openWallet();
-    if (!$('#recovery-saved').checked) {
-      $('#recovery-details').open = true;
-      $('#wallet-status').textContent = 'Save your private backup code and tick the box below before buying reviews.';
-      $('#recovery-details').scrollIntoView({ block: 'nearest' });
-      return;
-    }
     button.disabled = true;
     $('#wallet-status').textContent = 'Opening Stripe Checkout…';
     const result = await walletRequest('/api/checkout');

@@ -197,6 +197,26 @@ test('claiming a gift adds credits to an existing wallet without replacing its b
   } finally { DB.close(); }
 });
 
+test('a second browser starts empty and can restore the original credited wallet', async () => {
+  const DB = database();
+  const env = {
+    DB, PAYMENTS_MODE: 'test', STRIPE_SECRET_KEY: 'sk_test_fake', STRIPE_WEBHOOK_SECRET: 'whsec_fake',
+    OPENAI_API_KEY: 'api-secret'
+  };
+  try {
+    const first = await worker.fetch(post('/api/wallet', {}), env);
+    const firstWallet = await first.json();
+    const firstCookie = first.headers.get('set-cookie').split(';')[0];
+    DB.prepare('UPDATE wallets SET credits = 1 WHERE token_hash = ?')
+      .bind(await hashToken(firstWallet.recoveryCode)).run();
+    const second = await worker.fetch(post('/api/wallet', {}), env);
+    assert.equal((await second.json()).credits, 0);
+    const recovered = await worker.fetch(post('/api/wallet/recover', { recoveryCode: firstWallet.recoveryCode }), env);
+    assert.equal((await recovered.json()).credits, 1);
+    assert.equal(recovered.headers.get('set-cookie').split(';')[0], firstCookie);
+  } finally { DB.close(); }
+});
+
 test('a refunded or disputed purchase locks the wallet and cannot revoke twice', async () => {
   const DB = database();
   try {
