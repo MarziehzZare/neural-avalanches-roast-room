@@ -376,6 +376,22 @@ let inviteAccess = false;
 let roomCodeRequired = true;
 let paperPilot = false;
 function reviewingPaper() { return document.querySelector('input[name="review-target"]:checked').value === 'paper'; }
+function updatePaperFileStatus(message, error = false) {
+  const file = $('#paper-file').files[0];
+  const status = $('#paper-file-status');
+  status.textContent = message || (file ? `Selected: ${file.name} (${(file.size / 1_000_000).toFixed(1)} MB). Ready to review.` : 'No PDF selected yet.');
+  status.classList.toggle('is-error', error);
+  $('#paper-file').setAttribute('aria-invalid', error ? 'true' : 'false');
+}
+$('#paper-file').addEventListener('change', () => {
+  const file = $('#paper-file').files[0];
+  if (file && (!file.name.toLowerCase().endsWith('.pdf') || file.size > 5_000_000)) {
+    updatePaperFileStatus('This file cannot be reviewed. Choose a PDF under 5 MB.', true);
+  } else {
+    updatePaperFileStatus();
+    $('#form-status').textContent = '';
+  }
+});
 function updateReviewTarget() {
   const paper = reviewingPaper();
   $('#question-fields').hidden = paper;
@@ -488,7 +504,9 @@ $('#brief-form').addEventListener('submit', async (event) => {
   }
   const paperFile = $('#paper-file').files[0];
   if (paper && (!paperFile || !paperFile.name.toLowerCase().endsWith('.pdf') || paperFile.size > 5_000_000)) {
-    status.textContent = 'Choose a PDF under 5 MB.';
+    const message = paperFile ? 'This file cannot be reviewed. Choose a PDF under 5 MB.' : 'No PDF selected. Choose a PDF to review.';
+    status.textContent = message;
+    updatePaperFileStatus(message, true);
     $('#paper-file').focus();
     return;
   }

@@ -109,8 +109,9 @@
         </div>
         <div class="review-fields paper-fields" id="paper-fields" hidden>
           <label for="paper-file">Paper PDF</label>
-          <input id="paper-file" type="file" accept=".pdf,application/pdf" aria-describedby="paper-limits">
+          <input id="paper-file" type="file" accept=".pdf,application/pdf" aria-describedby="paper-limits paper-file-status">
           <p id="paper-limits">PDF only · up to 20 pages and 5 MB · one test review credit. The paper is sent to the AI service for analysis.</p>
+          <p id="paper-file-status" class="paper-file-status" role="status" aria-live="polite">No PDF selected yet.</p>
           <label for="paper-focus">What should the council focus on? <span class="muted">(optional)</span></label>
           <textarea id="paper-focus" maxlength="1200" placeholder="For example: Does the evidence support the criticality claim, especially Figures 2 and 3?"></textarea>
         </div>
@@ -119,6 +120,8 @@
           <label><input type="radio" name="mode" value="FULL" checked><span>Full council <small>7 seats · 3 rounds</small></span></label>
           <label><input type="radio" name="mode" value="QUICK"><span>Quick <small>7 seats · 2 rounds</small></span></label>
         </fieldset>
+        <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
+        <button class="convene" type="submit" id="submit-review">Ask the council online</button>
         <div class="room-code-wrap" id="room-code-wrap"><label for="room-code">Room access code</label><input id="room-code" type="password" autocomplete="off" placeholder="Code shared by the room owner"></div>
         <div class="credits-panel" id="credits-panel" hidden>
           <span class="balance-kicker">Your access</span>
@@ -131,9 +134,7 @@
           <details id="recovery-details" hidden><summary>Keep your credits when switching devices</summary><p>Save this private backup code somewhere private. It restores your balance in another browser or device.</p><div class="row"><input id="recovery-code" type="text" readonly aria-label="Private backup code"><button class="ghost" type="button" id="copy-recovery">Copy backup code</button></div></details>
           <details id="restore-details"><summary>Use credits from another browser</summary><p>Enter the private backup code you saved there.</p><div class="row"><input id="restore-code" type="text" placeholder="Private backup code" aria-label="Private backup code"><button class="ghost" type="button" id="restore-wallet">Restore credits</button></div></details>
         </div>
-        <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
         <p class="form-note" id="pilot-usage" hidden></p>
-        <button class="convene" type="submit" id="submit-review">Ask the council online</button>
         <div class="result-card" id="result-card" aria-label="Review result and PDF">
           <div class="result-card-copy"><span class="result-kicker">Your result</span><strong>Keep the council’s review</strong><p id="pdf-status" role="status">Your PDF will be available here when the review finishes. Downloading uses no extra credit.</p></div>
           <div class="result-card-actions"><button class="convene" type="button" id="download-latest-pdf" disabled>↓ Download PDF</button><button class="ghost" type="button" id="view-review" hidden>Read review</button></div>

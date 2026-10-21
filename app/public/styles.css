@@ -606,6 +606,9 @@ html { scroll-behavior: smooth; }
 #brief-form .paper-fields input[type=file] { width:100%; padding:12px; border:1px dashed #88a38d; border-radius:10px; background:#fff; color:#173b32; font:500 12px/1.4 var(--font-text); }
 #brief-form .paper-fields input[type=file]:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 #brief-form .paper-fields p { margin:0 0 5px; color:#526b5e; font-size:11.5px; line-height:1.5; }
+#brief-form .paper-fields .paper-file-status { margin:-3px 0 5px; font-weight:600; color:#244b3e; }
+#brief-form .paper-fields .paper-file-status.is-error { color:#a13f25; }
+#brief-form .paper-fields input[aria-invalid=true] { border-color:#a13f25; }
 #brief-form .paper-fields label { font:600 12.5px/1.3 var(--font-label); color:var(--ink); }
 #brief-form>label { font-weight:600; color:var(--ink); font-size:12.5px; }
 .room-code-wrap { display:grid; justify-items:start; gap:9px; }
