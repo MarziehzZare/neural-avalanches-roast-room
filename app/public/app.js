@@ -383,13 +383,24 @@ $('#buy-credits').addEventListener('click', async () => {
 
 $('#brief-form').addEventListener('submit', async (event) => {
   event.preventDefault();
-  if (!event.currentTarget.reportValidity()) return;
+  const claim = $('#claim').value.trim();
+  const roomCode = $('#room-code').value.trim();
+  const status = $('#form-status');
+  if (claim.length < 12) {
+    status.textContent = 'Enter a question of at least 12 characters.';
+    $('#claim').focus();
+    return;
+  }
+  if (!roomCode) {
+    status.textContent = 'Enter the room access code before asking the council.';
+    $('#room-code').focus();
+    return;
+  }
   if (paidReviews && !walletOpen) {
-    $('#form-status').textContent = 'Open your credit wallet before asking the council.';
+    status.textContent = 'Open your credit wallet before asking the council.';
     return;
   }
   const button = event.currentTarget.querySelector('button[type="submit"]');
-  const status = $('#form-status');
   button.disabled = true;
   status.textContent = 'The council is reviewing your question…';
   try {
@@ -397,10 +408,10 @@ $('#brief-form').addEventListener('submit', async (event) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        claim: $('#claim').value.trim(),
+        claim,
         context: $('#context').value.trim(),
         mode: document.querySelector('input[name="mode"]:checked').value,
-        accessCode: $('#room-code').value
+        accessCode: roomCode
       })
     });
     const result = await response.json().catch(() => ({}));
