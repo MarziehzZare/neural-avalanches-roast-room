@@ -47,7 +47,7 @@ test('sends a bounded, labeled review request and returns only the text', async 
     assert.equal(sent.model, 'gpt-5.6-terra');
     assert.match(sent.instructions, /Anna Levina/);
     assert.match(sent.instructions, /One model performs this analysis sequentially/);
-    assert.equal(sent.max_output_tokens, 4500);
+    assert.equal(sent.max_output_tokens, 10000);
   } finally {
     globalThis.fetch = originalFetch;
   }

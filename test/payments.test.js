@@ -115,6 +115,14 @@ test('paid council uses one credit only for a completed review and restores it o
     const failed = await worker.fetch(post('/api/council', { accessCode: 'invite', claim: 'Are these avalanches critical?', mode: 'QUICK' }, cookie), env);
     assert.equal(failed.status, 502);
     assert.equal(DB.prepare('SELECT credits FROM wallets WHERE id = ?').bind(id).first().credits, 10);
+    globalThis.fetch = async (_url, options) => {
+      assert.equal(JSON.parse(options.body).max_output_tokens, 10000);
+      return Response.json({ status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' }, output: [] });
+    };
+    const incomplete = await worker.fetch(post('/api/council', { accessCode: 'invite', claim: 'Are these avalanches critical?', mode: 'QUICK' }, cookie), env);
+    assert.equal(incomplete.status, 502);
+    assert.match((await incomplete.json()).error, /answer-length limit.*credit was restored/);
+    assert.equal(DB.prepare('SELECT credits FROM wallets WHERE id = ?').bind(id).first().credits, 10);
     globalThis.fetch = async () => Response.json({ status: 'completed', output: [{ content: [{ type: 'output_text', text: 'Review.' }] }] });
     const done = await worker.fetch(post('/api/council', { accessCode: 'invite', claim: 'Are these avalanches critical?', mode: 'QUICK' }, cookie), env);
     assert.equal(done.status, 200);

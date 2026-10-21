@@ -401,7 +401,9 @@ $('#brief-form').addEventListener('submit', async (event) => {
     return;
   }
   const button = event.currentTarget.querySelector('button[type="submit"]');
+  const buttonLabel = button.textContent;
   button.disabled = true;
+  button.textContent = 'Reviewing… please wait';
   status.textContent = 'The council is reviewing your question…';
   try {
     const response = await fetch('/api/council', {
@@ -429,6 +431,7 @@ $('#brief-form').addEventListener('submit', async (event) => {
     if (paidReviews && walletOpen) openWallet().catch(() => {});
   } finally {
     button.disabled = false;
+    button.textContent = buttonLabel;
   }
 });
 $('#prepare-request').addEventListener('click', () => {
