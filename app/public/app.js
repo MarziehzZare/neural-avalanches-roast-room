@@ -9,6 +9,25 @@ const lenses = [
 ];
 
 const $ = (selector) => document.querySelector(selector);
+const savedReviewKey = 'neural-avalanches:last-review';
+let latestReview = '';
+
+function showReview(review) {
+  $('#request-text').textContent = review;
+  $('#dialog-title').textContent = 'Council review';
+  $('#dialog-description').textContent = 'One AI model applied seven simulated research lenses. This is not their participation or independent peer review.';
+  $('#copy-request').textContent = 'Copy review';
+  $('#save-pdf').hidden = false;
+  $('#copy-status').textContent = '';
+  $('#request-dialog').showModal();
+}
+
+try {
+  latestReview = sessionStorage.getItem(savedReviewKey) || '';
+} catch { /* Storage may be unavailable in a private browser. */ }
+$('#view-review').hidden = !latestReview;
+$('#view-review').addEventListener('click', () => showReview(latestReview));
+$('#save-pdf').addEventListener('click', () => window.print());
 let selected = 0;
 let activePhase = 'brief';
 const phasePreviews = {
@@ -418,13 +437,11 @@ $('#brief-form').addEventListener('submit', async (event) => {
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || 'The review could not be completed. Please try again.');
-    $('#request-text').textContent = result.review;
-    $('#dialog-title').textContent = 'Council review';
-    $('#dialog-description').textContent = 'One AI model applied seven simulated research lenses. This is not their participation or independent peer review.';
-    $('#copy-request').textContent = 'Copy review';
-    $('#copy-status').textContent = '';
-    $('#request-dialog').showModal();
-    status.textContent = 'Review ready.';
+    latestReview = result.review;
+    try { sessionStorage.setItem(savedReviewKey, latestReview); } catch { /* The open tab still keeps this review. */ }
+    $('#view-review').hidden = false;
+    showReview(latestReview);
+    status.textContent = 'Review ready. Use “View latest review” to reopen it after closing.';
     if (paidReviews) openWallet().catch(() => {});
   } catch (error) {
     status.textContent = error.message || 'The review could not be completed.';
@@ -447,6 +464,7 @@ $('#prepare-request').addEventListener('click', () => {
   $('#dialog-title').textContent = 'Bring this request into Codex';
   $('#dialog-description').textContent = 'Copy the request below and paste it into your Codex chat with this room installed.';
   $('#copy-request').textContent = 'Copy request';
+  $('#save-pdf').hidden = true;
   $('#copy-status').textContent = '';
   $('#request-dialog').showModal();
 });

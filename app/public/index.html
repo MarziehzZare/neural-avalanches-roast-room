@@ -115,6 +115,7 @@
           <div class="row"><input id="restore-code" type="text" placeholder="Existing recovery code" aria-label="Existing recovery code"><button class="ghost" type="button" id="restore-wallet">Restore wallet</button></div>
         </div>
         <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
+        <button class="ghost" type="button" id="view-review" hidden>View latest review</button>
         <button class="convene" type="submit">Ask the council online</button>
         <button class="ghost" type="button" id="prepare-request">Copy a request for Codex instead</button>
         <p class="form-note">Your question is sent to an AI service for analysis. Avoid unpublished or identifying material unless you are authorized to share it.</p>
@@ -126,7 +127,10 @@
     <div class="dialog-head"><h2 id="dialog-title">Council review</h2><button class="ghost" type="button" id="close-dialog">Close</button></div>
     <p id="dialog-description">One AI model applies seven simulated research lenses. This is not their participation or independent peer review.</p>
     <pre id="request-text" aria-label="Council response"></pre>
-    <button class="convene" type="button" id="copy-request">Copy review</button>
+    <div class="review-actions">
+      <button class="convene" type="button" id="copy-request">Copy review</button>
+      <button class="ghost" type="button" id="save-pdf" hidden>Print / Save PDF</button>
+    </div>
     <p class="copy-status" id="copy-status" role="status"></p>
   </dialog>
 
