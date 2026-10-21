@@ -29,22 +29,29 @@ try {
 $('#view-review').hidden = !latestReview;
 $('#view-review').addEventListener('click', () => showReview(latestReview));
 $('#save-pdf').addEventListener('click', () => window.print());
-$('#download-pdf').addEventListener('click', async () => {
-  const button = $('#download-pdf');
+if (latestReview) $('#pdf-status').textContent = 'Your latest review is ready to download. Downloading uses no extra credit.';
+async function downloadCurrentReview(button, status) {
+  if (!latestReview) {
+    status.textContent = 'No review is ready yet. Ask the council online first; then download its PDF here.';
+    $('#claim').focus();
+    return;
+  }
   button.disabled = true;
   button.textContent = 'Preparing PDF…';
-  $('#copy-status').textContent = '';
+  status.textContent = 'Preparing your PDF…';
   try {
     const { downloadReviewPdf } = await import('/pdf-export.js');
     await downloadReviewPdf(latestReview);
-    $('#copy-status').textContent = 'PDF download started. Check your browser downloads.';
+    status.textContent = 'PDF downloaded. Check your browser downloads.';
   } catch {
-    $('#copy-status').textContent = 'PDF download failed. Use Print / Save PDF or Copy review.';
+    status.textContent = 'PDF download failed. Open the review and use Print / Save PDF or Copy review.';
   } finally {
     button.disabled = false;
     button.textContent = 'Download PDF';
   }
-});
+}
+$('#download-pdf').addEventListener('click', () => downloadCurrentReview($('#download-pdf'), $('#copy-status')));
+$('#download-latest-pdf').addEventListener('click', () => downloadCurrentReview($('#download-latest-pdf'), $('#pdf-status')));
 let selected = 0;
 let activePhase = 'brief';
 const phasePreviews = {
@@ -457,6 +464,7 @@ $('#brief-form').addEventListener('submit', async (event) => {
     latestReview = result.review;
     try { sessionStorage.setItem(savedReviewKey, latestReview); } catch { /* The open tab still keeps this review. */ }
     $('#view-review').hidden = false;
+    $('#pdf-status').textContent = 'Your review is ready to download. Downloading uses no extra credit.';
     showReview(latestReview);
     status.textContent = 'Review ready. Use “View latest review” to reopen it after closing.';
     if (paidReviews) openWallet().catch(() => {});
