@@ -17,6 +17,7 @@ function showReview(review) {
   $('#dialog-title').textContent = 'Council review';
   $('#dialog-description').textContent = 'One AI model applied seven simulated research lenses. This is not their participation or independent peer review.';
   $('#copy-request').textContent = 'Copy review';
+  $('#download-pdf').hidden = false;
   $('#save-pdf').hidden = false;
   $('#copy-status').textContent = '';
   $('#request-dialog').showModal();
@@ -28,6 +29,22 @@ try {
 $('#view-review').hidden = !latestReview;
 $('#view-review').addEventListener('click', () => showReview(latestReview));
 $('#save-pdf').addEventListener('click', () => window.print());
+$('#download-pdf').addEventListener('click', async () => {
+  const button = $('#download-pdf');
+  button.disabled = true;
+  button.textContent = 'Preparing PDF…';
+  $('#copy-status').textContent = '';
+  try {
+    const { downloadReviewPdf } = await import('/pdf-export.js');
+    await downloadReviewPdf(latestReview);
+    $('#copy-status').textContent = 'PDF download started. Check your browser downloads.';
+  } catch {
+    $('#copy-status').textContent = 'PDF download failed. Use Print / Save PDF or Copy review.';
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Download PDF';
+  }
+});
 let selected = 0;
 let activePhase = 'brief';
 const phasePreviews = {
@@ -464,6 +481,7 @@ $('#prepare-request').addEventListener('click', () => {
   $('#dialog-title').textContent = 'Bring this request into Codex';
   $('#dialog-description').textContent = 'Copy the request below and paste it into your Codex chat with this room installed.';
   $('#copy-request').textContent = 'Copy request';
+  $('#download-pdf').hidden = true;
   $('#save-pdf').hidden = true;
   $('#copy-status').textContent = '';
   $('#request-dialog').showModal();

@@ -10,8 +10,12 @@ const outputDir = path.resolve(appDir, '..', 'dist');
 await rm(outputDir, { recursive: true, force: true });
 await mkdir(path.join(outputDir, 'avatars'), { recursive: true });
 
-for (const file of ['index.html', 'styles.css', 'app.js']) {
+for (const file of ['index.html', 'styles.css', 'app.js', 'pdf-export.js']) {
   await cp(path.join(publicDir, file), path.join(outputDir, file));
+}
+await mkdir(path.join(outputDir, 'vendor'), { recursive: true });
+for (const file of ['pdfmake.min.js', 'vfs_fonts.js']) {
+  await cp(path.resolve(appDir, '..', 'node_modules', 'pdfmake', 'build', file), path.join(outputDir, 'vendor', file));
 }
 let html = await readFile(path.join(outputDir, 'index.html'), 'utf8');
 for (const asset of ['styles.css', 'app.js']) {
