@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createHmac } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import worker from '../worker/index.js';
-import { grantPaidCredits, verifyStripeEvent } from '../worker/payments.js';
+import { createCheckout, grantPaidCredits, verifyStripeEvent } from '../worker/payments.js';
 
 function database() {
   const sqlite = new DatabaseSync(':memory:');
@@ -45,6 +45,25 @@ test('Stripe signature accepts raw body and rejects stale or tampered events', a
   assert.equal(await verifyStripeEvent(stale.payload, stale.header, 'whsec_test'), null);
 });
 
+test('Checkout creates only the agreed test package on Stripe-hosted checkout', async () => {
+  const originalFetch = globalThis.fetch;
+  let params;
+  globalThis.fetch = async (url, options) => {
+    assert.equal(url, 'https://api.stripe.com/v1/checkout/sessions');
+    assert.equal(options.headers.authorization, 'Bearer sk_test_fake');
+    params = new URLSearchParams(options.body);
+    return Response.json({ url: 'https://checkout.stripe.com/c/pay/cs_test_1' });
+  };
+  try {
+    const url = await createCheckout('wallet-1', `${endpoint}/api/checkout`, { STRIPE_SECRET_KEY: 'sk_test_fake' });
+    assert.match(url, /^https:\/\/checkout\.stripe\.com\//);
+    assert.equal(params.get('line_items[0][price_data][unit_amount]'), '500');
+    assert.equal(params.get('line_items[0][price_data][currency]'), 'usd');
+    assert.equal(params.get('metadata[credit_count]'), '10');
+    assert.equal(params.get('client_reference_id'), 'wallet-1');
+  } finally { globalThis.fetch = originalFetch; }
+});
+
 test('verified checkout grants credits once, and only after paid status', async () => {
   const DB = database();
   try {
@@ -77,6 +96,8 @@ test('paid council uses one credit only for a completed review and restores it o
     assert.equal(walletResponse.status, 200);
     const cookie = walletResponse.headers.get('set-cookie').split(';')[0];
     const wallet = await walletResponse.json();
+    const noCredits = await worker.fetch(post('/api/council', { accessCode: 'invite', claim: 'Are these avalanches critical?', mode: 'QUICK' }, cookie), env);
+    assert.equal(noCredits.status, 402);
     const session = {
       object: 'checkout.session', id: 'cs_test_3', client_reference_id: null,
       payment_status: 'paid', mode: 'payment', amount_total: 500, currency: 'usd',

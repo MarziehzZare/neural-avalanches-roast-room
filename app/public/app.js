@@ -407,7 +407,7 @@ $('#brief-form').addEventListener('submit', async (event) => {
     $('#copy-status').textContent = '';
     $('#request-dialog').showModal();
     status.textContent = 'Review ready.';
-    if (paidReviews) await openWallet();
+    if (paidReviews) openWallet().catch(() => {});
   } catch (error) {
     status.textContent = error.message || 'The review could not be completed.';
     if (paidReviews && walletOpen) openWallet().catch(() => {});
