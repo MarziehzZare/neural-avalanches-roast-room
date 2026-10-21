@@ -1,3 +1,5 @@
+import { createCheckout, createWallet, findWallet, grantPaidCredits, recoverWallet, refundCredit, sameOrigin, spendCredit, verifyStripeEvent, walletCookie } from './payments.js';
+
 const sources = [
   ['Beggs and Plenz 2003, slice LFP avalanches', 'https://www.jneurosci.org/content/23/35/11167'],
   ['Beggs and Plenz 2004, stable activity patterns', 'https://www.jneurosci.org/content/24/22/5216'],
@@ -38,12 +40,64 @@ function json(data, status = 200) {
   });
 }
 
+async function readJson(request) {
+  if (!request.headers.get('content-type')?.startsWith('application/json') || Number(request.headers.get('content-length') || 0) > 12000) return null;
+  try {
+    const raw = await request.text();
+    return raw.length <= 12000 ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function paidMode(env) {
+  return env.PAYMENTS_MODE === 'test';
+}
+
+function paymentReady(env) {
+  return paidMode(env) && env.DB && env.STRIPE_SECRET_KEY?.startsWith('sk_test_') && env.STRIPE_WEBHOOK_SECRET?.startsWith('whsec_');
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === '/api/config' && request.method === 'GET') {
+      return json({ payments: paymentReady(env) ? 'test' : 'off', packageCredits: 10, packageUsd: 5 });
+    }
+    if (url.pathname === '/api/stripe-webhook' && request.method === 'POST') {
+      if (!paymentReady(env)) return json({ error: 'Payment service unavailable.' }, 503);
+      const payload = await request.text();
+      const event = await verifyStripeEvent(payload, request.headers.get('stripe-signature'), env.STRIPE_WEBHOOK_SECRET);
+      if (!event) return json({ error: 'Invalid signature.' }, 400);
+      await grantPaidCredits(event, env);
+      return json({ received: true });
+    }
+    if (['/api/wallet', '/api/wallet/recover', '/api/checkout'].includes(url.pathname)) {
+      if (!paymentReady(env)) return json({ error: 'Paid reviews are not configured yet.' }, 503);
+      if (request.method !== 'POST') return json({ error: 'Use POST.' }, 405);
+      if (!sameOrigin(request)) return json({ error: 'Open the room at its own website address.' }, 403);
+      const body = await readJson(request);
+      if (!body || body.accessCode !== env.ROOM_ACCESS_CODE) return json({ error: 'The room access code is incorrect.' }, 403);
+      if (url.pathname === '/api/wallet/recover') {
+        const wallet = await recoverWallet(body.recoveryCode, env);
+        if (!wallet) return json({ error: 'Recovery code not found.' }, 404);
+        const response = json({ credits: wallet.credits, recoveryCode: wallet.token });
+        response.headers.set('set-cookie', walletCookie(wallet.token));
+        return response;
+      }
+      let wallet = await findWallet(request, env);
+      if (url.pathname === '/api/checkout') {
+        if (!wallet) return json({ error: 'Open your credit wallet first.' }, 401);
+        const checkoutUrl = await createCheckout(wallet.id, request.url, env).catch(() => null);
+        return checkoutUrl ? json({ url: checkoutUrl }) : json({ error: 'Stripe Checkout is temporarily unavailable.' }, 502);
+      }
+      let newWallet = false;
+      if (!wallet) { wallet = await createWallet(env); newWallet = true; }
+      const response = json({ credits: wallet.credits, recoveryCode: wallet.token });
+      if (newWallet) response.headers.set('set-cookie', walletCookie(wallet.token));
+      return response;
+    }
     if (url.pathname !== '/api/council') return env.ASSETS.fetch(request);
     if (request.method !== 'POST') return json({ error: 'Use POST for a council review.' }, 405);
-    if (request.headers.get('origin') && request.headers.get('origin') !== url.origin) {
+    if (!sameOrigin(request)) {
       return json({ error: 'Open the room at its own website address.' }, 403);
     }
     if (!request.headers.get('content-type')?.startsWith('application/json')) {
@@ -52,14 +106,7 @@ export default {
     if (Number(request.headers.get('content-length') || 0) > 12000) {
       return json({ error: 'The question is too long.' }, 413);
     }
-    let body;
-    try {
-      const raw = await request.text();
-      if (raw.length > 12000) return json({ error: 'The question is too long.' }, 413);
-      body = JSON.parse(raw);
-    } catch {
-      return json({ error: 'The question could not be read.' }, 400);
-    }
+    const body = await readJson(request);
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
       return json({ error: 'The question could not be read.' }, 400);
     }
@@ -78,10 +125,17 @@ export default {
     const { success } = await env.ROOM_LIMIT.limit({ key: 'shared-room' });
     if (!success) return json({ error: 'The room is busy. Please try again in a minute.' }, 429);
 
+    let wallet = null;
+    if (paidMode(env)) {
+      if (!paymentReady(env)) return json({ error: 'Paid reviews are not configured yet.' }, 503);
+      wallet = await findWallet(request, env);
+      if (!wallet) return json({ error: 'Open your credit wallet first.' }, 401);
+      if (!await spendCredit(wallet.id, env)) return json({ error: 'No credits remain. Buy 10 reviews to continue.' }, 402);
+    }
+
     const sourceCatalog = sources.map(([name, link]) => `- ${name}: ${link}`).join('\n');
-    let upstream;
     try {
-      upstream = await fetch('https://api.openai.com/v1/responses', {
+      const upstream = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
         headers: {
           authorization: `Bearer ${env.OPENAI_API_KEY}`,
@@ -96,21 +150,24 @@ export default {
           store: false
         })
       });
+      if (!upstream.ok) {
+        const problem = await upstream.json().catch(() => ({}));
+        const code = typeof problem.error?.code === 'string' ? problem.error.code : String(upstream.status);
+        return json({ error: `The AI service rejected the request (${code}). Please check the API key, billing, and model access.` }, 502);
+      }
+      const result = await upstream.json();
+      const review = result.output?.flatMap(item => item.content || [])
+        .filter(item => item.type === 'output_text')
+        .map(item => item.text).join('\n\n').trim();
+      if (!review || result.status === 'incomplete') {
+        return json({ error: 'The review ended before a complete answer was ready. Please try Quick mode.' }, 502);
+      }
+      wallet = null; // Successful complete reviews alone consume a credit.
+      return json({ review: auditLinks(review), usage: result.usage || null });
     } catch {
       return json({ error: 'The AI service could not be reached. Please try again.' }, 502);
+    } finally {
+      if (wallet) await refundCredit(wallet.id, env);
     }
-    if (!upstream.ok) {
-      const problem = await upstream.json().catch(() => ({}));
-      const code = typeof problem.error?.code === 'string' ? problem.error.code : String(upstream.status);
-      return json({ error: `The AI service rejected the request (${code}). Please check the API key, billing, and model access.` }, 502);
-    }
-    const result = await upstream.json();
-    const review = result.output?.flatMap(item => item.content || [])
-      .filter(item => item.type === 'output_text')
-      .map(item => item.text).join('\n\n').trim();
-    if (!review || result.status === 'incomplete') {
-      return json({ error: 'The review ended before a complete answer was ready. Please try Quick mode.' }, 502);
-    }
-    return json({ review: auditLinks(review), usage: result.usage || null });
   }
 };

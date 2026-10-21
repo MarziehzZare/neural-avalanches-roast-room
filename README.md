@@ -10,6 +10,8 @@ With Node.js 20 or newer, run `npm start` and open <http://localhost:4731>. The 
 
 The easiest route for nontechnical collaborators is the [online room](https://neural-avalanches-roast-room.vieclinic.workers.dev), a room access code, and [COLLABORATOR-GUIDE.md](COLLABORATOR-GUIDE.md). The private GitHub repository is for maintaining the code. The 11–12 second [demo video](videos/neural-avalanches-demo/neural-avalanches-demo.mp4) shows the actual interface and scripted interaction. The site and server-side API key are configured; live answers require API credit in the owner's OpenAI organization before sharing the link; see [DEPLOY.md](DEPLOY.md).
 
+A separate [Stripe test-mode credit flow](PAYMENTS.md) is under development. It offers 10 reviews for US$5 in a test checkout; it does not accept real payments yet.
+
 ## How the online review works
 
 The browser sends the question to a Cloudflare Worker. The Worker checks a shared access code and a rate limit, then calls the OpenAI Responses API with a server-side key. The default model is `gpt-5.6-terra`. It applies all seven simulated research lenses in one call and discloses that it is **one model**, not seven independent reviewers or the named scientists. FULL requests ask for openings, debate, and ratification; QUICK requests ask for openings and debate with final positions. The prompt contains a fixed catalog of exact primary-source URLs, but no full papers or live literature search. The model is instructed to identify unknowns and limit claims to what the supplied information supports. The Worker sets `store: false`; users should still only submit research they are authorized to send to OpenAI.

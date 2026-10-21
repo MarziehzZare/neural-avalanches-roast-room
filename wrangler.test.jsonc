@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "neural-avalanches-roast-room-test",
+  "main": "./worker/index.js",
+  "compatibility_date": "2026-10-20",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "vars": { "PAYMENTS_MODE": "test" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "neural-avalanches-credits-test",
+      "database_id": "77527ed6-eaaa-4f59-bc7f-9d5ffa83c4aa",
+      "migrations_dir": "./migrations"
+    }
+  ],
+  "ratelimits": [
+    { "name": "ROOM_LIMIT", "namespace_id": "1002", "simple": { "limit": 3, "period": 60 } }
+  ]
+}

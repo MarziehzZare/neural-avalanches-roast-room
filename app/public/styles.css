@@ -561,6 +561,12 @@ html { scroll-behavior: smooth; }
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 .question { margin:0 24px 28px; padding:22px; background:var(--surface); border:1px solid var(--hairline); border-radius:var(--r); display:grid; grid-template-columns:minmax(260px,.85fr) minmax(320px,1.15fr); gap:28px; }
 .question-header h2 { font:500 clamp(21px,2.6vw,29px)/1.15 var(--font-display); letter-spacing:var(--track-head); color:var(--ink); margin:8px 0; }
+.credits-panel { margin:14px 0; padding:15px; border:1px solid var(--hairline); border-radius:12px; background:var(--surface); }
+.credits-panel[hidden], .credits-panel details[hidden] { display:none; }
+.credits-panel p { margin:7px 0; font-size:13px; line-height:1.5; }
+.credits-panel .row { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
+.credits-panel details { margin:10px 0; }
+.credits-panel input { max-width:100%; }
 .question-header p { font-size:13.5px; line-height:1.6; color:var(--ink-soft); max-width:55ch; }
 #brief-form { display:grid; gap:9px; }
 #brief-form>label { font-weight:600; color:var(--ink); font-size:12.5px; }

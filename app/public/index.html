@@ -106,6 +106,14 @@
         </fieldset>
         <label for="room-code">Room access code</label>
         <input id="room-code" type="password" autocomplete="off" required placeholder="Code shared by the room owner">
+        <div class="credits-panel" id="credits-panel" hidden>
+          <strong>Review credits · Stripe test mode</strong>
+          <p>10 reviews for US$5. Full and Quick each use one credit. Test payments do not charge a real card.</p>
+          <p id="wallet-status" role="status">Enter your room code, then open your wallet.</p>
+          <div class="row"><button class="ghost" type="button" id="open-wallet">Open my wallet</button><button class="ghost" type="button" id="buy-credits" disabled>Buy 10 credits</button></div>
+          <details id="recovery-details" hidden><summary>Save your recovery code</summary><p>Keep this private. It restores your credits if you change browsers or devices.</p><input id="recovery-code" type="text" readonly aria-label="Wallet recovery code"><button class="ghost" type="button" id="copy-recovery">Copy code</button></details>
+          <div class="row"><input id="restore-code" type="text" placeholder="Existing recovery code" aria-label="Existing recovery code"><button class="ghost" type="button" id="restore-wallet">Restore wallet</button></div>
+        </div>
         <button class="convene" type="submit">Ask the council online</button>
         <button class="ghost" type="button" id="prepare-request">Copy a request for Codex instead</button>
         <p class="form-note">Your question is sent to an AI service for analysis. Avoid unpublished or identifying material unless you are authorized to share it.</p>

@@ -323,9 +323,66 @@ setInterval(() => {
 }, 180);
 reducedMotion.addEventListener('change', () => lenses.forEach((_, index) => updateFace(index)));
 
+let paidReviews = false;
+let walletOpen = false;
+async function walletRequest(path, extra = {}) {
+  const response = await fetch(path, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ accessCode: $('#room-code').value, ...extra })
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || 'The wallet could not be opened.');
+  return result;
+}
+async function openWallet(path = '/api/wallet', extra = {}) {
+  const result = await walletRequest(path, extra);
+  walletOpen = true;
+  $('#wallet-status').textContent = `${result.credits} review credit${result.credits === 1 ? '' : 's'} available.`;
+  $('#buy-credits').disabled = false;
+  $('#recovery-code').value = result.recoveryCode;
+  $('#recovery-details').hidden = false;
+  return result;
+}
+fetch('/api/config').then(response => response.json()).then(config => {
+  if (config.payments !== 'test') return;
+  paidReviews = true;
+  $('#credits-panel').hidden = false;
+  const payment = new URL(location.href).searchParams.get('payment');
+  if (payment === 'success') $('#wallet-status').textContent = 'Payment completed. Open your wallet to see credits after Stripe confirms it.';
+  if (payment === 'cancelled') $('#wallet-status').textContent = 'Checkout was cancelled. Your existing credits are safe.';
+}).catch(() => {});
+$('#open-wallet').addEventListener('click', async () => {
+  try { await openWallet(); }
+  catch (error) { $('#wallet-status').textContent = error.message; }
+});
+$('#restore-wallet').addEventListener('click', async () => {
+  try { await openWallet('/api/wallet/recover', { recoveryCode: $('#restore-code').value.trim() }); }
+  catch (error) { $('#wallet-status').textContent = error.message; }
+});
+$('#copy-recovery').addEventListener('click', async () => {
+  await navigator.clipboard.writeText($('#recovery-code').value);
+  $('#wallet-status').textContent = 'Recovery code copied. Keep it private.';
+});
+$('#buy-credits').addEventListener('click', async () => {
+  const button = $('#buy-credits');
+  button.disabled = true;
+  $('#wallet-status').textContent = 'Opening Stripe Checkout…';
+  try {
+    const result = await walletRequest('/api/checkout');
+    location.assign(result.url);
+  } catch (error) {
+    $('#wallet-status').textContent = error.message;
+    button.disabled = false;
+  }
+});
+
 $('#brief-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   if (!event.currentTarget.reportValidity()) return;
+  if (paidReviews && !walletOpen) {
+    $('#form-status').textContent = 'Open your credit wallet before asking the council.';
+    return;
+  }
   const button = event.currentTarget.querySelector('button[type="submit"]');
   const status = $('#form-status');
   button.disabled = true;
@@ -350,8 +407,10 @@ $('#brief-form').addEventListener('submit', async (event) => {
     $('#copy-status').textContent = '';
     $('#request-dialog').showModal();
     status.textContent = 'Review ready.';
+    if (paidReviews) await openWallet();
   } catch (error) {
     status.textContent = error.message || 'The review could not be completed.';
+    if (paidReviews && walletOpen) openWallet().catch(() => {});
   } finally {
     button.disabled = false;
   }
