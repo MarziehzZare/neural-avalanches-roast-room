@@ -26,16 +26,22 @@ function showReview(review) {
 try {
   latestReview = sessionStorage.getItem(savedReviewKey) || '';
 } catch { /* Storage may be unavailable in a private browser. */ }
-$('#view-review').hidden = !latestReview;
+function showReadyResult() {
+  $('#view-review').hidden = false;
+  $('#download-latest-pdf').disabled = false;
+  $('#result-card').classList.add('is-ready');
+  $('#pdf-status').textContent = 'Review ready. Download your PDF here or read the answer again. No extra credit is used.';
+}
+if (latestReview) showReadyResult();
 $('#view-review').addEventListener('click', () => showReview(latestReview));
 $('#save-pdf').addEventListener('click', () => window.print());
-if (latestReview) $('#pdf-status').textContent = 'Your latest review is ready to download. Downloading uses no extra credit.';
 async function downloadCurrentReview(button, status) {
   if (!latestReview) {
     status.textContent = 'No review is ready yet. Ask the council online first; then download its PDF here.';
     $('#claim').focus();
     return;
   }
+  const originalLabel = button.textContent;
   button.disabled = true;
   button.textContent = 'Preparing PDF…';
   status.textContent = 'Preparing your PDF…';
@@ -47,7 +53,7 @@ async function downloadCurrentReview(button, status) {
     status.textContent = 'PDF download failed. Open the review and use Print / Save PDF or Copy review.';
   } finally {
     button.disabled = false;
-    button.textContent = 'Download PDF';
+    button.textContent = originalLabel;
   }
 }
 $('#download-pdf').addEventListener('click', () => downloadCurrentReview($('#download-pdf'), $('#copy-status')));
@@ -368,6 +374,7 @@ reducedMotion.addEventListener('change', () => lenses.forEach((_, index) => upda
 
 let paidReviews = false;
 let walletOpen = false;
+let inviteAccess = false;
 async function walletRequest(path, extra = {}) {
   const response = await fetch(path, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -380,25 +387,49 @@ async function walletRequest(path, extra = {}) {
 async function openWallet(path = '/api/wallet', extra = {}) {
   const result = await walletRequest(path, extra);
   walletOpen = true;
-  $('#wallet-status').textContent = result.locked ? 'This wallet is on hold after a payment reversal. Contact the room owner.' : `${result.credits} review credit${result.credits === 1 ? '' : 's'} available.`;
+  inviteAccess = Boolean(result.invited);
+  $('#room-code-wrap').hidden = inviteAccess;
+  $('#wallet-status').textContent = result.locked ? 'This balance is on hold after a payment reversal. Contact the room owner.' : `${result.credits} review${result.credits === 1 ? '' : 's'} available`;
   $('#buy-credits').dataset.locked = result.locked ? 'true' : 'false';
-  $('#buy-credits').disabled = result.locked || !$('#recovery-saved').checked;
+  $('#buy-credits').disabled = Boolean(result.locked);
+  if ($('#recovery-code').value !== result.recoveryCode) $('#recovery-saved').checked = false;
   $('#recovery-code').value = result.recoveryCode;
   $('#recovery-details').hidden = false;
-  $('#recovery-details').open = true;
   return result;
 }
-fetch('/api/config').then(response => response.json()).then(config => {
+fetch('/api/config').then(response => response.json()).then(async config => {
   if (!['test', 'live'].includes(config.payments)) return;
   paidReviews = true;
   $('#credits-panel').hidden = false;
-  $('#credits-heading').textContent = config.payments === 'test' ? 'Review credits · Stripe test mode' : 'Review credits';
-  $('#credits-description').textContent = `10 reviews for US$5. Full and Quick each use one credit.${config.payments === 'test' ? ' Test payments do not charge a real card.' : ''}`;
+  $('#credits-heading').textContent = config.payments === 'test' ? 'Review balance · test mode' : 'Review balance';
+  $('#credits-description').textContent = `Full and Quick each use one review. Add 10 for US$5.${config.payments === 'test' ? ' Test payments do not charge a real card.' : ''}`;
+  $('#buy-credits').disabled = false;
   const payment = new URL(location.href).searchParams.get('payment');
-  if (payment === 'success') $('#wallet-status').textContent = 'Payment submitted. Re-enter your room code and open your wallet to see credits after Stripe confirms it.';
+  if (payment === 'success') $('#wallet-status').textContent = 'Payment submitted. Enter your room code to refresh your balance after Stripe confirms it.';
   if (payment === 'cancelled') $('#wallet-status').textContent = 'Checkout was cancelled. Your existing credits are safe.';
+  const giftToken = location.hash.startsWith('#gift=') ? location.hash.slice(6) : '';
+  if (giftToken) {
+    try {
+      const gift = await openWallet('/api/gift/claim', { inviteToken: giftToken });
+      $('#wallet-status').textContent = `${gift.credits} complimentary review${gift.credits === 1 ? '' : 's'} available`;
+    } catch (error) {
+      try {
+        const existing = await openWallet();
+        if (!existing.invited) $('#wallet-status').textContent = error.message;
+      } catch { $('#wallet-status').textContent = error.message; }
+    }
+    history.replaceState(null, '', `${location.pathname}${location.search}#question`);
+    $('#question').scrollIntoView({ block: 'start' });
+  } else if ($('#room-code').value.trim()) {
+    openWallet().catch(() => {});
+  } else {
+    openWallet().catch(() => {}); // Restores a previously claimed invitation from its browser cookie.
+  }
 }).catch(() => {});
-$('#recovery-saved').addEventListener('change', () => { $('#buy-credits').disabled = !walletOpen || $('#buy-credits').dataset.locked === 'true' || !$('#recovery-saved').checked; });
+$('#room-code').addEventListener('input', () => { walletOpen = false; });
+$('#room-code').addEventListener('change', () => {
+  if (paidReviews && $('#room-code').value.trim()) openWallet().catch(error => { $('#wallet-status').textContent = error.message; });
+});
 $('#open-wallet').addEventListener('click', async () => {
   try { await openWallet(); }
   catch (error) { $('#wallet-status').textContent = error.message; }
@@ -409,13 +440,20 @@ $('#restore-wallet').addEventListener('click', async () => {
 });
 $('#copy-recovery').addEventListener('click', async () => {
   await navigator.clipboard.writeText($('#recovery-code').value);
-  $('#wallet-status').textContent = 'Recovery code copied. Keep it private.';
+  $('#wallet-status').textContent = 'Backup code copied. Save it privately, then tick the box below before buying.';
 });
 $('#buy-credits').addEventListener('click', async () => {
   const button = $('#buy-credits');
-  button.disabled = true;
-  $('#wallet-status').textContent = 'Opening Stripe Checkout…';
   try {
+    if (!walletOpen) await openWallet();
+    if (!$('#recovery-saved').checked) {
+      $('#recovery-details').open = true;
+      $('#wallet-status').textContent = 'Save your private backup code and tick the box below before buying reviews.';
+      $('#recovery-details').scrollIntoView({ block: 'nearest' });
+      return;
+    }
+    button.disabled = true;
+    $('#wallet-status').textContent = 'Opening Stripe Checkout…';
     const result = await walletRequest('/api/checkout');
     location.assign(result.url);
   } catch (error) {
@@ -434,14 +472,14 @@ $('#brief-form').addEventListener('submit', async (event) => {
     $('#claim').focus();
     return;
   }
-  if (!roomCode) {
+  if (!roomCode && !inviteAccess) {
     status.textContent = 'Enter the room access code before asking the council.';
     $('#room-code').focus();
     return;
   }
   if (paidReviews && !walletOpen) {
-    status.textContent = 'Open your credit wallet before asking the council.';
-    return;
+    try { await openWallet(); }
+    catch (error) { status.textContent = error.message; return; }
   }
   const button = event.currentTarget.querySelector('button[type="submit"]');
   const buttonLabel = button.textContent;
@@ -463,8 +501,7 @@ $('#brief-form').addEventListener('submit', async (event) => {
     if (!response.ok) throw new Error(result.error || 'The review could not be completed. Please try again.');
     latestReview = result.review;
     try { sessionStorage.setItem(savedReviewKey, latestReview); } catch { /* The open tab still keeps this review. */ }
-    $('#view-review').hidden = false;
-    $('#pdf-status').textContent = 'Your review is ready to download. Downloading uses no extra credit.';
+    showReadyResult();
     showReview(latestReview);
     status.textContent = 'Review ready. Use “View latest review” to reopen it after closing.';
     if (paidReviews) openWallet().catch(() => {});

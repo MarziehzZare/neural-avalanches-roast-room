@@ -1,4 +1,4 @@
-import { createCheckout, createWallet, findWallet, grantPaidCredits, recoverWallet, refundCredit, sameOrigin, spendCredit, verifyStripeEvent, walletCookie } from './payments.js';
+import { claimGiftInvite, createCheckout, createWallet, findWallet, grantPaidCredits, recoverWallet, refundCredit, sameOrigin, spendCredit, verifyStripeEvent, walletCookie } from './payments.js';
 
 const sources = [
   ['Beggs and Plenz 2003, slice LFP avalanches', 'https://www.jneurosci.org/content/23/35/11167'],
@@ -72,20 +72,35 @@ export default {
       await grantPaidCredits(event, env);
       return json({ received: true });
     }
+    if (url.pathname === '/api/gift/claim') {
+      if (!paymentReady(env)) return json({ error: 'Review invitations are unavailable.' }, 503);
+      if (request.method !== 'POST') return json({ error: 'Use POST.' }, 405);
+      if (!sameOrigin(request)) return json({ error: 'Open the invitation at the room website.' }, 403);
+      const body = await readJson(request);
+      const existingWallet = await findWallet(request, env);
+      if (existingWallet?.locked) return json({ error: 'This balance is on hold. Contact the room owner.' }, 403);
+      const gift = await claimGiftInvite(body?.inviteToken, env, existingWallet);
+      if (!gift) return json({ error: 'This invitation is invalid or has already been used.' }, 410);
+      const response = json({ credits: gift.credits, recoveryCode: gift.token, locked: false, invited: true });
+      response.headers.set('set-cookie', walletCookie(gift.token));
+      return response;
+    }
     if (['/api/wallet', '/api/wallet/recover', '/api/checkout'].includes(url.pathname)) {
       if (!paymentReady(env)) return json({ error: 'Paid reviews are not configured yet.' }, 503);
       if (request.method !== 'POST') return json({ error: 'Use POST.' }, 405);
       if (!sameOrigin(request)) return json({ error: 'Open the room at its own website address.' }, 403);
       const body = await readJson(request);
-      if (!body || body.accessCode !== env.ROOM_ACCESS_CODE) return json({ error: 'The room access code is incorrect.' }, 403);
+      if (!body) return json({ error: 'The request could not be read.' }, 400);
       if (url.pathname === '/api/wallet/recover') {
         const wallet = await recoverWallet(body.recoveryCode, env);
         if (!wallet) return json({ error: 'Recovery code not found.' }, 404);
-        const response = json({ credits: wallet.credits, recoveryCode: wallet.token, locked: Boolean(wallet.locked) });
+        if (body.accessCode !== env.ROOM_ACCESS_CODE && !wallet.invite_access) return json({ error: 'The room access code is incorrect.' }, 403);
+        const response = json({ credits: wallet.credits, recoveryCode: wallet.token, locked: Boolean(wallet.locked), invited: Boolean(wallet.invite_access) });
         response.headers.set('set-cookie', walletCookie(wallet.token));
         return response;
       }
       let wallet = await findWallet(request, env);
+      if (body.accessCode !== env.ROOM_ACCESS_CODE && !wallet?.invite_access) return json({ error: 'The room access code is incorrect.' }, 403);
       if (url.pathname === '/api/checkout') {
         if (!wallet) return json({ error: 'Open your credit wallet first.' }, 401);
         if (wallet.locked) return json({ error: 'This wallet is on hold after a payment reversal. Contact the room owner.' }, 403);
@@ -94,7 +109,7 @@ export default {
       }
       let newWallet = false;
       if (!wallet) { wallet = await createWallet(env); newWallet = true; }
-      const response = json({ credits: wallet.credits, recoveryCode: wallet.token, locked: Boolean(wallet.locked) });
+      const response = json({ credits: wallet.credits, recoveryCode: wallet.token, locked: Boolean(wallet.locked), invited: Boolean(wallet.invite_access) });
       if (newWallet) response.headers.set('set-cookie', walletCookie(wallet.token));
       return response;
     }
@@ -116,7 +131,8 @@ export default {
     if (!env.ROOM_ACCESS_CODE || !env.OPENAI_API_KEY) {
       return json({ error: 'Online questions are not configured yet. Please contact the room owner.' }, 503);
     }
-    if (typeof body.accessCode !== 'string' || body.accessCode !== env.ROOM_ACCESS_CODE) {
+    let wallet = paidMode(env) && env.DB ? await findWallet(request, env) : null;
+    if (body.accessCode !== env.ROOM_ACCESS_CODE && !wallet?.invite_access) {
       return json({ error: 'The room access code is incorrect.' }, 403);
     }
     const claim = typeof body.claim === 'string' ? body.claim.trim() : '';
@@ -128,10 +144,8 @@ export default {
     const { success } = await env.ROOM_LIMIT.limit({ key: 'shared-room' });
     if (!success) return json({ error: 'The room is busy. Please try again in a minute.' }, 429);
 
-    let wallet = null;
     if (paidMode(env)) {
       if (!paymentReady(env)) return json({ error: 'Paid reviews are not configured yet.' }, 503);
-      wallet = await findWallet(request, env);
       if (!wallet) return json({ error: 'Open your credit wallet first.' }, 401);
       if (wallet.locked) return json({ error: 'This wallet is on hold after a payment reversal. Contact the room owner.' }, 403);
       if (!await spendCredit(wallet.id, env)) return json({ error: 'No credits remain. Buy 10 reviews to continue.' }, 402);

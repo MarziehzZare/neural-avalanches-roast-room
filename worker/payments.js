@@ -28,7 +28,7 @@ export async function hashToken(token) {
 export async function findWallet(request, env) {
   const token = readCookie(request);
   if (!token) return null;
-  const wallet = await env.DB.prepare('SELECT id, credits, locked FROM wallets WHERE token_hash = ?')
+  const wallet = await env.DB.prepare('SELECT id, credits, locked, invite_access FROM wallets WHERE token_hash = ?')
     .bind(await hashToken(token)).first();
   return wallet ? { ...wallet, token } : null;
 }
@@ -38,14 +38,38 @@ export async function createWallet(env) {
   const id = crypto.randomUUID();
   await env.DB.prepare('INSERT INTO wallets (id, token_hash, credits) VALUES (?, ?, 0)')
     .bind(id, await hashToken(token)).run();
-  return { id, token, credits: 0, locked: 0 };
+  return { id, token, credits: 0, locked: 0, invite_access: 0 };
 }
 
 export async function recoverWallet(token, env) {
   if (typeof token !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
-  const wallet = await env.DB.prepare('SELECT id, credits, locked FROM wallets WHERE token_hash = ?')
+  const wallet = await env.DB.prepare('SELECT id, credits, locked, invite_access FROM wallets WHERE token_hash = ?')
     .bind(await hashToken(token)).first();
   return wallet ? { ...wallet, token } : null;
+}
+
+export async function claimGiftInvite(token, env, existingWallet = null) {
+  if (typeof token !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
+  const giftHash = await hashToken(token);
+  if (existingWallet) {
+    const claim = await env.DB.prepare('UPDATE gift_invites SET claimed_wallet_id = ?, claimed_at = CURRENT_TIMESTAMP WHERE token_hash = ? AND claimed_wallet_id IS NULL RETURNING credits')
+      .bind(existingWallet.id, giftHash).first();
+    if (!claim) return null;
+    const balance = await env.DB.prepare('SELECT credits, locked, invite_access FROM wallets WHERE id = ?')
+      .bind(existingWallet.id).first();
+    return { ...existingWallet, ...balance };
+  }
+  const walletToken = randomToken();
+  const walletId = crypto.randomUUID();
+  const [insert, claim] = await env.DB.batch([
+    env.DB.prepare('INSERT INTO wallets (id, token_hash, credits, invite_access) SELECT ?, ?, 0, 1 FROM gift_invites WHERE token_hash = ? AND claimed_wallet_id IS NULL')
+      .bind(walletId, await hashToken(walletToken), giftHash),
+    env.DB.prepare('UPDATE gift_invites SET claimed_wallet_id = ?, claimed_at = CURRENT_TIMESTAMP WHERE token_hash = ? AND claimed_wallet_id IS NULL RETURNING credits')
+      .bind(walletId, giftHash)
+  ]);
+  const credits = claim.results?.[0]?.credits;
+  if (!insert.meta?.changes || !Number.isInteger(credits)) return null;
+  return { id: walletId, token: walletToken, credits, locked: 0, invite_access: 1 };
 }
 
 export async function spendCredit(walletId, env) {

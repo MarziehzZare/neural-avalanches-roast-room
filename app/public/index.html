@@ -104,21 +104,22 @@
           <label><input type="radio" name="mode" value="FULL" checked><span>Full council <small>7 seats · 3 rounds</small></span></label>
           <label><input type="radio" name="mode" value="QUICK"><span>Quick <small>7 seats · 2 rounds</small></span></label>
         </fieldset>
-        <label for="room-code">Room access code</label>
-        <input id="room-code" type="password" autocomplete="off" required placeholder="Code shared by the room owner">
+        <div class="room-code-wrap" id="room-code-wrap"><label for="room-code">Room access code</label><input id="room-code" type="password" autocomplete="off" placeholder="Code shared by the room owner"></div>
         <div class="credits-panel" id="credits-panel" hidden>
-          <strong id="credits-heading">Review credits</strong>
-          <p id="credits-description">10 reviews for US$5. Full and Quick each use one credit.</p>
-          <p id="wallet-status" role="status">Enter your room code, then open your wallet.</p>
-          <div class="row"><button class="ghost" type="button" id="open-wallet">Open my wallet</button><button class="ghost" type="button" id="buy-credits" disabled>Buy 10 credits</button></div>
-          <details id="recovery-details" hidden><summary>Save your recovery code before buying</summary><p>Keep this private. It restores your credits if you change browsers or devices.</p><input id="recovery-code" type="text" readonly aria-label="Wallet recovery code"><button class="ghost" type="button" id="copy-recovery">Copy code</button><label class="recovery-ack"><input type="checkbox" id="recovery-saved"> I saved this code somewhere private</label></details>
-          <div class="row"><input id="restore-code" type="text" placeholder="Existing recovery code" aria-label="Existing recovery code"><button class="ghost" type="button" id="restore-wallet">Restore wallet</button></div>
+          <span class="balance-kicker">Your access</span>
+          <strong id="credits-heading">Review balance</strong>
+          <p class="balance-value" id="wallet-status" role="status">Enter your room code to see your balance.</p>
+          <p id="credits-description">Full and Quick each use one review. Add 10 for US$5.</p>
+          <div class="row"><button class="ghost" type="button" id="open-wallet">Check credits</button><button class="ghost" type="button" id="buy-credits" disabled>Buy 10 reviews · US$5</button></div>
+          <details id="recovery-details" hidden><summary>Keep your credits when switching devices</summary><p>Save this private backup code before buying. It restores your balance if you change browsers or devices.</p><div class="row"><input id="recovery-code" type="text" readonly aria-label="Private backup code"><button class="ghost" type="button" id="copy-recovery">Copy backup code</button></div><label class="recovery-ack"><input type="checkbox" id="recovery-saved"> I saved my backup code privately</label></details>
+          <details id="restore-details"><summary>Already have credits on another device?</summary><p>Enter the private backup code you saved there.</p><div class="row"><input id="restore-code" type="text" placeholder="Private backup code" aria-label="Private backup code"><button class="ghost" type="button" id="restore-wallet">Restore credits</button></div></details>
         </div>
         <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
-        <button class="ghost" type="button" id="view-review" hidden>View latest review</button>
         <button class="convene" type="submit">Ask the council online</button>
-        <button class="ghost" type="button" id="download-latest-pdf">Download PDF</button>
-        <p class="form-note" id="pdf-status" role="status">The PDF is available here after a review finishes. Downloading uses no extra credit.</p>
+        <div class="result-card" id="result-card" aria-label="Review result and PDF">
+          <div class="result-card-copy"><span class="result-kicker">Your result</span><strong>Keep the council’s review</strong><p id="pdf-status" role="status">Your PDF will be available here when the review finishes. Downloading uses no extra credit.</p></div>
+          <div class="result-card-actions"><button class="convene" type="button" id="download-latest-pdf" disabled>↓ Download PDF</button><button class="ghost" type="button" id="view-review" hidden>Read review</button></div>
+        </div>
         <button class="ghost" type="button" id="prepare-request">Copy a request for Codex instead</button>
         <p class="form-note">Your question is sent to an AI service for analysis. Avoid unpublished or identifying material unless you are authorized to share it.</p>
       </form>

@@ -30,6 +30,10 @@ Never set a live Stripe key in the test Worker or invite paying users before the
 
 Wallets use a secure, HTTP-only browser cookie. The visible recovery code restores credits on another device, so users must keep it private. There is no email login yet. The Stripe customer email is **not** used as proof of wallet ownership. A lost cookie and lost recovery code cannot be recovered through the app.
 
+## Complimentary invitations
+
+Migration `0003_gift_invites.sql` adds one-use credit invitations. Apply it to the test and live D1 databases before deploying the invite-enabled Worker. Create an invitation with `npm run create:invite -- --test "Test guest" 2` or `npm run create:invite -- --live "Recipient label" 10`. The command saves a private link in `output/invites/`, which is excluded from Git. Share that link privately; the first browser to open it claims the credits. The link itself is a bearer invitation, not proof of the recipient's identity. After claim, the browser receives its own wallet cookie and backup code, and can use the complimentary reviews without entering the shared room code. The invitation cannot be redeemed twice. The owner pays the OpenAI API cost of completed reviews.
+
 Stripe confirms payment to the signed webhook; the browser's return page does not grant credits. Each Checkout Session can grant credits once even if Stripe retries the webhook. Stripe payments enter the owner's Stripe account. The owner separately pays OpenAI for model usage; these balances are not linked automatically.
 
 When Stripe reports a refund or dispute, the linked wallet loses up to ten unused credits and is put on hold for owner review. If the user already spent credits, this does not recover the owner's AI cost. A lost browser cookie **and** lost recovery code cannot be recovered through the app. If the answer completes on the server but the browser connection fails before displaying it, a credit may be consumed; handle that case manually as support.
