@@ -5,10 +5,11 @@
   "scripts": {
     "start": "node app/server.mjs",
     "build:share": "node app/build-shareable.mjs",
-    "build:release": "node scripts/build-release.mjs",
     "test": "node --test test/worker.test.js",
     "dev:online": "npx --yes wrangler dev --port 4732",
     "deploy": "npm run build:share && npx --yes wrangler deploy"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  }
 }
