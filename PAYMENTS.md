@@ -6,16 +6,15 @@ The Stripe integration is isolated in `wrangler.test.jsonc`. It sells **10 revie
 
 1. Use Stripe **test mode** and obtain a secret key beginning `sk_test_`. Keep it out of GitHub and chat.
 2. Deploy the test Worker with `npm run deploy:test`. Its URL is `https://neural-avalanches-roast-room-test.vieclinic.workers.dev`.
-3. Add secrets to that Worker using interactive terminal prompts:
+3. On this Mac, open `Connect Stripe Test.command` and paste the test key at the hidden Terminal prompt. It uploads the key, creates a Stripe test webhook for `checkout.session.completed` and `checkout.session.async_payment_succeeded`, and uploads the webhook signing secret. If setting up elsewhere, do the same steps manually in Stripe test mode.
+4. Add the room and OpenAI secrets to the test Worker using interactive terminal prompts:
 
    ```sh
-   npx --yes wrangler secret put STRIPE_SECRET_KEY --config wrangler.test.jsonc
    npx --yes wrangler secret put ROOM_ACCESS_CODE --config wrangler.test.jsonc
    npx --yes wrangler secret put OPENAI_API_KEY --config wrangler.test.jsonc
    ```
 
-4. In Stripe test mode, create a webhook endpoint for `https://neural-avalanches-roast-room-test.vieclinic.workers.dev/api/stripe-webhook`. Listen for `checkout.session.completed` and `checkout.session.async_payment_succeeded`. Copy its signing secret beginning `whsec_` into the terminal prompt for `npx --yes wrangler secret put STRIPE_WEBHOOK_SECRET --config wrangler.test.jsonc`.
-5. Open the test room, enter the room code, open the wallet, save its recovery code, and buy the test package with a Stripe test card. Confirm that the balance becomes 10 and that one successful review changes it to 9. A failed review must leave it at 10. A live OpenAI answer also requires API credit in the owner's OpenAI account.
+5. Open the test room, enter the room code, open the wallet, save its recovery code, and buy the test package with a [Stripe test card](https://docs.stripe.com/testing). Confirm that the balance becomes 10 and that one successful review changes it to 9. A failed review must leave it at 10. A live OpenAI answer also requires API credit in the owner's OpenAI account.
 
 The test D1 database is `neural-avalanches-credits-test` and its schema is in `migrations/0001_credits.sql`. Apply future migrations with `npx --yes wrangler d1 migrations apply neural-avalanches-credits-test --remote --config wrangler.test.jsonc`.
 
