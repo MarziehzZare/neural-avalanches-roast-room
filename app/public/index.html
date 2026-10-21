@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f1ea">
+  <title>Neural Avalanches · Roast Room</title>
+  <link rel="icon" href="/brand/favicon-mz.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-wordmark" aria-label="Marzieh Zare — The thinking behind the thinking">
+        <span class="brand-wordmark-name">MARZIEH ZARE</span>
+        <span class="brand-wordmark-tagline">The thinking behind the thinking</span>
+      </div>
+      <span class="brand-rule" aria-hidden="true"></span>
+      <span class="brand-name">Neural Avalanches Roast Room</span>
+    </div>
+    <ol class="stepper" role="tablist" aria-label="Council workflow previews">
+      <li class="active" role="presentation"><button id="step-brief" type="button" role="tab" aria-selected="true" aria-controls="center" data-phase="brief" tabindex="0">Brief</button></li>
+      <li role="presentation"><button id="step-openings" type="button" role="tab" aria-selected="false" aria-controls="center" data-phase="openings" tabindex="-1">Openings</button></li>
+      <li role="presentation"><button id="step-fault-lines" type="button" role="tab" aria-selected="false" aria-controls="center" data-phase="fault-lines" tabindex="-1">Fault lines</button></li>
+      <li role="presentation"><button id="step-debate" type="button" role="tab" aria-selected="false" aria-controls="center" data-phase="debate" tabindex="-1">Debate</button></li>
+      <li role="presentation"><button id="step-ratification" type="button" role="tab" aria-selected="false" aria-controls="center" data-phase="ratification" tabindex="-1">Ratification</button></li>
+      <li role="presentation"><button id="step-synthesis" type="button" role="tab" aria-selected="false" aria-controls="center" data-phase="synthesis" tabindex="-1">Synthesis</button></li>
+    </ol>
+    <div class="top-actions"><a class="ghost" href="#question">Your question</a></div>
+  </header>
+
+  <main>
+    <div class="layout">
+      <section class="stage-wrap" aria-label="The council table">
+        <div class="stage" id="stage">
+          <div class="wall" aria-hidden="true"></div>
+          <div class="spot" id="spot" aria-hidden="true"></div>
+          <div id="seats"></div>
+          <div class="table" id="table" aria-hidden="true"><span class="etch">MZ</span></div>
+          <div id="plates"></div>
+          <div class="center" id="center" role="tabpanel" aria-labelledby="step-brief" tabindex="0">
+            <div class="waiting">
+              <span class="pulse"><i></i>The room is open</span>
+              <h1>Bring a claim to the Roast Room</h1>
+              <p>Frame a neuronal avalanche claim, paper, or study design. The seven research lenses are ready at the table.</p>
+              <div class="row"><button class="ghost" id="watch-exchange" type="button">Watch all seven lenses</button><a class="ghost" href="#question">Your question</a></div>
+            </div>
+            <div class="phase-preview" id="phase-preview" hidden>
+              <span class="phase-kicker" id="phase-kicker">Workflow preview</span>
+              <h1 id="phase-title"></h1>
+              <p class="phase-summary" id="phase-summary"></p>
+              <ul class="phase-points" id="phase-points"></ul>
+              <div class="phase-actions"><button class="ghost" id="preview-watch" type="button" hidden>Watch all seven lenses</button><a class="ghost" href="#question">Ask your question</a></div>
+              <p class="phase-disclosure">Workflow preview only. Enter a question below to request an AI review online.</p>
+            </div>
+            <div class="exchange-card" id="exchange-card" hidden aria-label="Simulated research-lens exchange">
+              <div class="exchange-eyebrow"><span>Sample exchange · simulated lenses</span><span id="exchange-progress">1 / 8</span></div>
+              <div class="exchange-participants">
+                <span class="exchange-person"><small>Speaking</small><b id="exchange-speaker"></b></span>
+                <span class="exchange-arrow" aria-hidden="true">→</span>
+                <span class="exchange-person"><small>To</small><b id="exchange-target"></b></span>
+              </div>
+              <div class="exchange-why"><b>Why</b><span id="exchange-why"></span></div>
+              <p class="exchange-line" id="exchange-line" aria-live="polite"></p>
+              <div class="exchange-controls">
+                <span>Illustrative prompts, not scientists’ quotations</span>
+                <div><button class="ghost" id="exchange-toggle" type="button">Pause</button><button class="ghost" id="exchange-next" type="button">Next</button><button class="ghost" id="exchange-close" type="button">Close</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="panel" aria-label="Key points">
+        <div class="panel-head">Key points</div>
+        <div class="tabpanel">
+          <div class="feed-phase">The research council</div>
+          <div class="feed-note">Each seat is a simulated analytical lens grounded in selected published work. Click a portrait or nameplate to see its question.</div>
+          <div class="feed-phase">Selected lens</div>
+          <div class="lens-card" aria-live="polite">
+            <div class="detail-index">LENS 01</div>
+            <h2 id="detail-name">John M. Beggs</h2>
+            <p id="detail-focus"></p>
+            <p id="detail-question"></p>
+            <span id="stage-note" class="sr-only">Beggs is at the table</span>
+          </div>
+          <div class="feed-phase">Evidence ladder</div>
+          <div class="feed-note">Observed avalanches → critical regime → self-organization → functional benefit. Each step needs its own evidence.</div>
+          <div class="feed-phase">How to start</div>
+          <div class="feed-note">Enter a question below to request an online review. Each response separates observations, proposed explanations, and remaining uncertainty.</div>
+        </div>
+      </aside>
+    </div>
+
+    <section class="question" id="question" aria-labelledby="question-title">
+      <div class="question-header"><span class="label">On the table</span><h2 id="question-title">What claim should the council pressure-test?</h2><p>Name the system, signal, event definition, observation, and inference when you know them. Unknown details can stay unknown.</p></div>
+      <form id="brief-form">
+        <label for="claim">Claim or research question</label>
+        <textarea id="claim" required minlength="12" placeholder="Do these LFP avalanches support a critical dynamical regime in awake human cortex?"></textarea>
+        <label for="context">System, modality, and evidence <span class="muted">(if known)</span></label>
+        <textarea id="context" placeholder="Species or preparation, electrode geometry, threshold, bin width, sampling rate, figures, or paper links…"></textarea>
+        <fieldset class="mode">
+          <legend>Review mode</legend>
+          <label><input type="radio" name="mode" value="FULL" checked><span>Full council <small>7 seats · 3 rounds</small></span></label>
+          <label><input type="radio" name="mode" value="QUICK"><span>Quick <small>7 seats · 2 rounds</small></span></label>
+        </fieldset>
+        <label for="room-code">Room access code</label>
+        <input id="room-code" type="password" autocomplete="off" required placeholder="Code shared by the room owner">
+        <button class="convene" type="submit">Ask the council online</button>
+        <button class="ghost" type="button" id="prepare-request">Copy a request for Codex instead</button>
+        <p class="form-note">Your question is sent to an AI service for analysis. Avoid unpublished or identifying material unless you are authorized to share it.</p>
+        <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+  </main>
+
+  <dialog id="request-dialog" class="card-dialog">
+    <div class="dialog-head"><h2 id="dialog-title">Council review</h2><button class="ghost" type="button" id="close-dialog">Close</button></div>
+    <p id="dialog-description">One AI model applies seven simulated research lenses. This is not their participation or independent peer review.</p>
+    <pre id="request-text" aria-label="Council response"></pre>
+    <button class="convene" type="button" id="copy-request">Copy review</button>
+    <p class="copy-status" id="copy-status" role="status"></p>
+  </dialog>
+
+  <p class="disclaimer">Illustrated avatars generated from user-provided photos. Simulated research lenses grounded in selected published work; not these people’s participation, endorsement, current opinion, or predicted advice. This is not peer review.</p>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>
