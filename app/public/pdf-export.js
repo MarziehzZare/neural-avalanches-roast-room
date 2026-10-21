@@ -63,7 +63,7 @@ function plain(text) {
 
 function parseReview(review) {
   const lines = review.replace(/\r\n/g, '\n')
-    .replace(/^\s*One AI model applied seven simulated research lenses; no named scientist participated\.\s*/i, '')
+    .replace(/^\s*(?:\*\*)?One AI model applied seven simulated research lenses; no named scientist participated\.(?:\*\*)?\s*/i, '')
     .split('\n');
   const content = [];
   const isNewBlock = (line) => /^(?:#{2,3} |\| |[-*] )/.test(line);

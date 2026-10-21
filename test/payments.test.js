@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHmac } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
+import { PDFDocument } from 'pdf-lib';
 import worker from '../worker/index.js';
 import { createCheckout, grantPaidCredits, hashToken, randomToken, verifyStripeEvent } from '../worker/payments.js';
 
@@ -175,6 +176,66 @@ test('a private complimentary invite can be claimed once and used without the sh
     const credits = DB.prepare('SELECT credits FROM wallets WHERE invite_access = 1').first().credits;
     assert.equal(credits, 9);
   } finally { globalThis.fetch = originalFetch; DB.close(); }
+});
+
+test('paper pilot reads a bounded PDF, sends it as a file, and consumes one test credit', async () => {
+  const DB = database();
+  const env = {
+    DB, PAYMENTS_MODE: 'test', STRIPE_SECRET_KEY: 'sk_test_fake', STRIPE_WEBHOOK_SECRET: 'whsec_fake',
+    OPENAI_API_KEY: 'api-secret', ROOM_LIMIT: { limit: async () => ({ success: true }) },
+    ASSETS: { fetch: async () => new Response('asset') }
+  };
+  const pdf = await PDFDocument.create();
+  pdf.addPage();
+  const bytes = await pdf.save();
+  const originalFetch = globalThis.fetch;
+  let sent;
+  globalThis.fetch = async (_url, options) => {
+    sent = JSON.parse(options.body);
+    return Response.json({ status: 'completed', output: [{ content: [{ type: 'output_text', text: 'Paper critique.' }] }] });
+  };
+  try {
+    const opened = await worker.fetch(post('/api/wallet', {}), env);
+    const cookie = opened.headers.get('set-cookie').split(';')[0];
+    DB.prepare('UPDATE wallets SET credits = 2 WHERE token_hash = ?').bind(await hashToken(cookie.split('=')[1])).run();
+    const form = new FormData();
+    form.set('paper', new Blob([bytes], { type: 'application/pdf' }), 'sample.pdf');
+    form.set('focus', 'Assess the central claim.');
+    form.set('mode', 'QUICK');
+    const response = await worker.fetch(new Request(`${endpoint}/api/paper`, { method: 'POST', headers: { origin: endpoint, cookie }, body: form }), env);
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).review, 'Paper critique.');
+    assert.equal(sent.store, false);
+    assert.match(sent.instructions, /paper-specific strength or concern/);
+    assert.equal(sent.input[0].content[1].type, 'input_file');
+    assert.match(sent.input[0].content[1].file_data, /^data:application\/pdf;base64,/);
+    assert.equal(sent.input[0].content[1].detail, 'low');
+    assert.equal(DB.prepare('SELECT credits FROM wallets').first().credits, 1);
+  } finally { globalThis.fetch = originalFetch; DB.close(); }
+});
+
+test('paper pilot rejects overlong PDFs without consuming a credit', async () => {
+  const DB = database();
+  const env = {
+    DB, PAYMENTS_MODE: 'test', STRIPE_SECRET_KEY: 'sk_test_fake', STRIPE_WEBHOOK_SECRET: 'whsec_fake',
+    OPENAI_API_KEY: 'api-secret', ROOM_LIMIT: { limit: async () => ({ success: true }) },
+    ASSETS: { fetch: async () => new Response('asset') }
+  };
+  try {
+    const opened = await worker.fetch(post('/api/wallet', {}), env);
+    const cookie = opened.headers.get('set-cookie').split(';')[0];
+    DB.prepare('UPDATE wallets SET credits = 1 WHERE token_hash = ?').bind(await hashToken(cookie.split('=')[1])).run();
+    const pdf = await PDFDocument.create();
+    for (let page = 0; page < 21; page++) pdf.addPage();
+    const form = new FormData();
+    form.set('paper', new Blob([await pdf.save()], { type: 'application/pdf' }), 'long.pdf');
+    form.set('focus', 'Assess the central claim.');
+    form.set('mode', 'FULL');
+    const response = await worker.fetch(new Request(`${endpoint}/api/paper`, { method: 'POST', headers: { origin: endpoint, cookie }, body: form }), env);
+    assert.equal(response.status, 400);
+    assert.match((await response.json()).error, /20 pages/);
+    assert.equal(DB.prepare('SELECT credits FROM wallets').first().credits, 1);
+  } finally { DB.close(); }
 });
 
 test('claiming a gift adds credits to an existing wallet without replacing its browser cookie', async () => {

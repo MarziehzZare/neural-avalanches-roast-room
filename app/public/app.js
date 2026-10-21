@@ -374,6 +374,25 @@ let paidReviews = false;
 let walletOpen = false;
 let inviteAccess = false;
 let roomCodeRequired = true;
+let paperPilot = false;
+function reviewingPaper() { return document.querySelector('input[name="review-target"]:checked').value === 'paper'; }
+function updateReviewTarget() {
+  const paper = reviewingPaper();
+  $('#question-fields').hidden = paper;
+  $('#paper-fields').hidden = !paper;
+  $('#prepare-request').hidden = paper;
+  $('#submit-review').textContent = paper ? 'Review this paper' : 'Ask the council online';
+  $('#question-title').textContent = paper ? 'Put a paper before the council' : 'What claim should the council pressure-test?';
+  $('#question-description').textContent = paper
+    ? 'Upload the paper and name the claim or figure you most want challenged. The seven lenses will read the paper before they debate it.'
+    : 'Name the system, signal, event definition, observation, and inference when you know them. Unknown details can stay unknown.';
+  $('#privacy-note').textContent = paper
+    ? 'The full PDF is sent to the AI service. Upload only papers you are authorized to share. This is a pilot research critique, not peer review.'
+    : 'Your question is sent to an AI service for analysis. Avoid unpublished or identifying material unless you are authorized to share it.';
+  $('#form-status').textContent = '';
+  $('#pilot-usage').hidden = true;
+}
+document.querySelectorAll('input[name="review-target"]').forEach(input => input.addEventListener('change', updateReviewTarget));
 async function walletRequest(path, extra = {}) {
   const response = await fetch(path, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -398,6 +417,8 @@ async function openWallet(path = '/api/wallet', extra = {}) {
 }
 fetch('/api/config').then(response => response.json()).then(async config => {
   if (!['test', 'live'].includes(config.payments)) return;
+  paperPilot = Boolean(config.paperPilot);
+  $('#paper-option').hidden = !paperPilot;
   paidReviews = true;
   roomCodeRequired = false;
   $('#room-code-wrap').hidden = true;
@@ -457,10 +478,21 @@ $('#buy-credits').addEventListener('click', async () => {
 
 $('#brief-form').addEventListener('submit', async (event) => {
   event.preventDefault();
+  const paper = reviewingPaper();
   const claim = $('#claim').value.trim();
   const roomCode = $('#room-code').value.trim();
   const status = $('#form-status');
-  if (claim.length < 12) {
+  if (paper && !paperPilot) {
+    status.textContent = 'Paper reviews are not available in this room yet.';
+    return;
+  }
+  const paperFile = $('#paper-file').files[0];
+  if (paper && (!paperFile || !paperFile.name.toLowerCase().endsWith('.pdf') || paperFile.size > 5_000_000)) {
+    status.textContent = 'Choose a PDF under 5 MB.';
+    $('#paper-file').focus();
+    return;
+  }
+  if (!paper && claim.length < 12) {
     status.textContent = 'Enter a question of at least 12 characters.';
     $('#claim').focus();
     return;
@@ -478,17 +510,24 @@ $('#brief-form').addEventListener('submit', async (event) => {
   const buttonLabel = button.textContent;
   button.disabled = true;
   button.textContent = 'Reviewing… please wait';
-  status.textContent = 'The council is reviewing your question…';
+  status.textContent = paper ? 'The council is reading your paper. Keep this page open…' : 'The council is reviewing your question…';
   try {
-    const response = await fetch('/api/council', {
+    const mode = document.querySelector('input[name="mode"]:checked').value;
+    const form = new FormData();
+    if (paper) {
+      form.set('paper', paperFile);
+      form.set('focus', $('#paper-focus').value.trim());
+      form.set('mode', mode);
+      form.set('accessCode', roomCode);
+    }
+    const response = await fetch(paper ? '/api/paper' : '/api/council', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      ...(paper ? { body: form } : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
         claim,
         context: $('#context').value.trim(),
-        mode: document.querySelector('input[name="mode"]:checked').value,
+        mode,
         accessCode: roomCode
-      })
+      }) })
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || 'The review could not be completed. Please try again.');
@@ -497,6 +536,12 @@ $('#brief-form').addEventListener('submit', async (event) => {
     showReadyResult();
     showReview(latestReview);
     status.textContent = 'Review ready. Use “View latest review” to reopen it after closing.';
+    if (paper && result.usage) {
+      const input = Number(result.usage.input_tokens || 0).toLocaleString();
+      const output = Number(result.usage.output_tokens || 0).toLocaleString();
+      $('#pilot-usage').textContent = `Pilot usage for this paper: ${input} input tokens and ${output} output tokens.`;
+      $('#pilot-usage').hidden = false;
+    }
     if (paidReviews) openWallet().catch(() => {});
   } catch (error) {
     status.textContent = error.message || 'The review could not be completed.';

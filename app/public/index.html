@@ -94,12 +94,26 @@
     </div>
 
     <section class="question" id="question" aria-labelledby="question-title">
-      <div class="question-header"><span class="label">On the table</span><h2 id="question-title">What claim should the council pressure-test?</h2><p>Name the system, signal, event definition, observation, and inference when you know them. Unknown details can stay unknown.</p></div>
+      <div class="question-header"><span class="label">On the table</span><h2 id="question-title">What claim should the council pressure-test?</h2><p id="question-description">Name the system, signal, event definition, observation, and inference when you know them. Unknown details can stay unknown.</p></div>
       <form id="brief-form" novalidate>
-        <label for="claim">Claim or research question</label>
-        <textarea id="claim" required minlength="12" placeholder="Do these LFP avalanches support a critical dynamical regime in awake human cortex?"></textarea>
-        <label for="context">System, modality, and evidence <span class="muted">(if known)</span></label>
-        <textarea id="context" placeholder="Species or preparation, electrode geometry, threshold, bin width, sampling rate, figures, or paper links…"></textarea>
+        <fieldset class="review-target" aria-label="What to review">
+          <legend>Bring to the table</legend>
+          <label><input type="radio" name="review-target" value="question" checked><span>Ask a question</span></label>
+          <label id="paper-option" hidden><input type="radio" name="review-target" value="paper"><span>Review a paper <small>PDF pilot</small></span></label>
+        </fieldset>
+        <div class="review-fields" id="question-fields">
+          <label for="claim">Claim or research question</label>
+          <textarea id="claim" required minlength="12" placeholder="Do these LFP avalanches support a critical dynamical regime in awake human cortex?"></textarea>
+          <label for="context">System, modality, and evidence <span class="muted">(if known)</span></label>
+          <textarea id="context" placeholder="Species or preparation, electrode geometry, threshold, bin width, sampling rate, figures, or paper links…"></textarea>
+        </div>
+        <div class="review-fields paper-fields" id="paper-fields" hidden>
+          <label for="paper-file">Paper PDF</label>
+          <input id="paper-file" type="file" accept=".pdf,application/pdf" aria-describedby="paper-limits">
+          <p id="paper-limits">PDF only · up to 20 pages and 5 MB · one test review credit. The paper is sent to the AI service for analysis.</p>
+          <label for="paper-focus">What should the council focus on? <span class="muted">(optional)</span></label>
+          <textarea id="paper-focus" maxlength="1200" placeholder="For example: Does the evidence support the criticality claim, especially Figures 2 and 3?"></textarea>
+        </div>
         <fieldset class="mode">
           <legend>Review mode</legend>
           <label><input type="radio" name="mode" value="FULL" checked><span>Full council <small>7 seats · 3 rounds</small></span></label>
@@ -118,13 +132,14 @@
           <details id="restore-details"><summary>Use credits from another browser</summary><p>Enter the private backup code you saved there.</p><div class="row"><input id="restore-code" type="text" placeholder="Private backup code" aria-label="Private backup code"><button class="ghost" type="button" id="restore-wallet">Restore credits</button></div></details>
         </div>
         <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
-        <button class="convene" type="submit">Ask the council online</button>
+        <p class="form-note" id="pilot-usage" hidden></p>
+        <button class="convene" type="submit" id="submit-review">Ask the council online</button>
         <div class="result-card" id="result-card" aria-label="Review result and PDF">
           <div class="result-card-copy"><span class="result-kicker">Your result</span><strong>Keep the council’s review</strong><p id="pdf-status" role="status">Your PDF will be available here when the review finishes. Downloading uses no extra credit.</p></div>
           <div class="result-card-actions"><button class="convene" type="button" id="download-latest-pdf" disabled>↓ Download PDF</button><button class="ghost" type="button" id="view-review" hidden>Read review</button></div>
         </div>
         <button class="ghost" type="button" id="prepare-request">Copy a request for Codex instead</button>
-        <p class="form-note">Your question is sent to an AI service for analysis. Avoid unpublished or identifying material unless you are authorized to share it.</p>
+        <p class="form-note" id="privacy-note">Your question is sent to an AI service for analysis. Avoid unpublished or identifying material unless you are authorized to share it.</p>
       </form>
     </section>
   </main>

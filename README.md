@@ -10,6 +10,8 @@ With Node.js 20 or newer, run `npm start` and open <http://localhost:4731>. The 
 
 The [paid online room](https://neural-avalanches-roast-room-paid.vieclinic.workers.dev/#question) is open to anyone with its link. Visitors can buy 10 reviews for US$5 or use a private complimentary invitation. There is no shared room code; see [PAID-COLLABORATOR-GUIDE.md](PAID-COLLABORATOR-GUIDE.md). The [original online room](https://neural-avalanches-roast-room.vieclinic.workers.dev) still uses a shared access code and [COLLABORATOR-GUIDE.md](COLLABORATOR-GUIDE.md). The [Stripe test room](https://neural-avalanches-roast-room-test.vieclinic.workers.dev) accepts only test payments. The private GitHub repository is for maintaining the code. The 11–12 second [demo video](videos/neural-avalanches-demo/neural-avalanches-demo.mp4) shows the actual interface and scripted interaction.
 
+The Stripe test room also has a [paper-review pilot](PAPER-REVIEW-PILOT.md). It accepts a PDF of up to 20 pages and 5 MB, uses one test review credit, and reports token use. Paper review is not yet offered in the paid room while its costs are being measured.
+
 Payment and complimentary credit setup is documented in [PAYMENTS.md](PAYMENTS.md).
 
 ## How the online review works
