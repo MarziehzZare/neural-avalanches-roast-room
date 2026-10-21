@@ -76,3 +76,21 @@ test('omits links outside the curated source catalog', async () => {
     globalThis.fetch = originalFetch;
   }
 });
+
+test('reports an upstream error code without exposing provider details', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => Response.json({
+    error: { code: 'insufficient_quota', message: 'Sensitive provider detail' }
+  }, { status: 429 });
+  try {
+    const result = await worker.fetch(request({
+      claim: 'Do these avalanches prove criticality?', mode: 'QUICK', accessCode: 'demo-secret'
+    }), env);
+    const { error } = await result.json();
+    assert.equal(result.status, 502);
+    assert.match(error, /insufficient_quota/);
+    assert.doesNotMatch(error, /Sensitive provider detail/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

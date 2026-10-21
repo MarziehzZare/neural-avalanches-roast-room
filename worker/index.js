@@ -99,7 +99,11 @@ export default {
     } catch {
       return json({ error: 'The AI service could not be reached. Please try again.' }, 502);
     }
-    if (!upstream.ok) return json({ error: 'The AI service could not complete the review. Please try again later.' }, 502);
+    if (!upstream.ok) {
+      const problem = await upstream.json().catch(() => ({}));
+      const code = typeof problem.error?.code === 'string' ? problem.error.code : String(upstream.status);
+      return json({ error: `The AI service rejected the request (${code}). Please check the API key, billing, and model access.` }, 502);
+    }
     const result = await upstream.json();
     const review = result.output?.flatMap(item => item.content || [])
       .filter(item => item.type === 'output_text')
